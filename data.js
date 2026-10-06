@@ -7,11 +7,14 @@
 
 const COMISION = 25000;
 
+/* PRIVACIDAD: lo que se publica (titulo, texto, zonaPublica) NO lleva dirección exacta ni Maps.
+   zona, ubic y mapa son privados: sólo salen en la respuesta de Messenger "¿Dónde está?". */
 const HOUSES = [
   {id:"lunaluna", nombre:"Casa en Col. Luna Luna", corto:"la casa de la Luna Luna",
    chip:"Luna Luna", jefe:{n:"El Guardián de la Luna", e:"🌕"},
    titulo:"Casa en venta Col. Luna Luna, Cd. Madero · 3 recámaras",
    precio:"$1,700,000", precioNum:"1700000",
+   zonaPublica:"Col. Jesús Luna Luna, Cd. Madero",
    zona:"Calle José Puente, Col. Jesús Luna Luna, C.P. 89514, Cd. Madero, Tamps.",
    ubic:"en la calle José Puente, Col. Jesús Luna Luna, C.P. 89514, en Cd. Madero",
    mapa:"https://maps.app.goo.gl/kTcwBmbmWoYydgU76",
@@ -44,6 +47,7 @@ PLANTA ALTA
    chip:"Unidad Nacional", jefe:{n:"El Señor de la Esquina", e:"🏰"},
    titulo:"Casa en esquina en venta, Amp. Unidad Nacional, Cd. Madero",
    precio:"$2,350,000", precioNum:"2350000",
+   zonaPublica:"Amp. Unidad Nacional, Cd. Madero",
    zona:"13 de Septiembre y Benito Juárez, Amp. Unidad Nacional, Cd. Madero, Tamps.",
    ubic:"en la esquina de 13 de Septiembre y Benito Juárez, en la Ampliación Unidad Nacional, Madero",
    mapa:"https://maps.app.goo.gl/4bp56QBzNpcR2V617",
@@ -68,6 +72,7 @@ Casa independiente en esquina, ideal para ampliar o invertir.
    chip:"Miramar", jefe:{n:"El Kraken de Miramar", e:"🦑"},
    titulo:"Casa en venta cerca de Playa Miramar · 4 recámaras, residencial con alberca",
    precio:"$4,672,500", precioNum:"4672500",
+   zonaPublica:"Cerca de Playa Miramar, Cd. Madero",
    zona:"Cerca de Playa Miramar, Cd. Madero, Tamps.",
    ubic:"cerca de Playa Miramar, en Madero, dentro de un residencial con vigilancia",
    mapa:"",
@@ -107,6 +112,7 @@ FORMA DE PAGO
    titulo:"Preventa casa nueva 3 recámaras cerca de Madero Centro",
    precio:"$2,600,000", precioNum:"2600000",
    quedan:"todavía quedan 2 disponibles, la de en medio y la del fondo",
+   zonaPublica:"Col. Felipe Carrillo Puerto, Cd. Madero",
    zona:"Col. Felipe Carrillo Puerto, calle Bolivia (frente al jardín de niños), Cd. Madero",
    ubic:"en la Col. Felipe Carrillo Puerto, calle Bolivia, frente al jardín de niños, cerca del centro de Madero",
    mapa:"https://maps.app.goo.gl/eHntYBJ1koMVaiuy5",
@@ -130,7 +136,7 @@ PLANTA ALTA
 • Balcón/terraza
 • Cajón de estacionamiento adicional
 
-📍 Col. Felipe Carrillo Puerto, calle Bolivia, frente al jardín de niños.
+📍 Col. Felipe Carrillo Puerto, Cd. Madero.
 
 📲 ¡No dejes que te ganen la tuya! Escríbeme para más info y apartar.`}
 ];
@@ -184,24 +190,7 @@ const PESOS = {
 };
 const PESO_APARTADA = 0.4;
 
-/* Frases de apertura para grupos (se van rotando para que no se vea igual).
-   {saludo} se cambia por "Buenas tardes" o "Buenas noches" según el bloque. */
-const OPENERS = [
-  "Sigue disponible 👇",
-  "Casa en venta en Madero 👇",
-  "Para quien ande buscando casa en Madero 👇",
-  "{saludo}, les comparto esta casa en venta 👇",
-  "Se vende, info por mensaje 👇",
-  "Si andan buscando casa en Madero, chéquenla 👇",
-  "Todavía disponible, aquí van los detalles 👇",
-  "Les dejo esta opción en Madero 👇",
-  "Por si alguien anda buscando o conoce a alguien 👇",
-  "Casa en venta, pregunten sin compromiso 👇",
-  "{saludo} grupo, sigo con esta casa disponible 👇",
-  "Se vende casa, aquí la info completa 👇",
-  "Interesados mándenme mensaje 👇",
-  "Se puede ir a ver esta semana 👇"
-];
+/* (Ya no hay frases de apertura: cada publicación empieza directo con el título de la casa.) */
 
 /* XP por cada cosa REAL que haces */
 const XP = {

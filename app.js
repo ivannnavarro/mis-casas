@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.3.0";
+const APP_VERSION = "3.4.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -11,7 +11,6 @@ const DEFAULT_CFG = {blocks:["14:00","20:00"], gap:2, goals:{grupos:100,pub:7,co
 
 let state  = store.get("state",{});
 let custom = store.get("custom2",{});
-let openerIdx = store.get("opener",0);
 let groups = store.get("groups",null) || clone(DEFAULT_GROUPS);
 let cfg    = Object.assign(clone(DEFAULT_CFG), store.get("cfg",{}));
 cfg.goals  = Object.assign(clone(DEFAULT_CFG.goals), cfg.goals||{});
@@ -62,6 +61,11 @@ function migrate(){
     store.set("groupsV",u.v);
   });
   if(changed){saveGroups();if(plans[todayKey()])rebuildToday()}
+  // privacidad: la dirección exacta y el Maps sólo pueden ir en "¿Dónde está?"
+  const EXACTA=/maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps|bolivia|jard[ií]n de ni[ñn]os|13 de septiembre|benito ju[aá]rez|jos[eé] puente|89514|C\.P\./i;
+  let fixed=false;
+  Object.values(custom).forEach(m=>Object.keys(m).forEach(k=>{if(k!=="ubicacion"&&EXACTA.test(m[k])){delete m[k];fixed=true}}));
+  if(fixed)store.set("custom2",custom);
 }
 
 /* ---------- helpers ---------- */
@@ -192,7 +196,6 @@ function buildPlan(key, forced){
     }
     out.push(...L);
   }
-  out.forEach((x,k)=>{x.o=(dn*5+k)%OPENERS.length});
   return out;
 }
 function ensureToday(){
@@ -228,8 +231,7 @@ function itemTime(plan,it){
 }
 function groupText(it){
   const h=house(it.h);
-  const o=OPENERS[it.o%OPENERS.length].replace("{saludo}",cap(saludo()));
-  return o+"\n\n"+h.texto+(h.mapa?`\n\n📍 ${h.mapa}`:"");
+  return h.texto;
 }
 function duePending(){
   const p=plans[todayKey()];if(!p)return 0;const nm=nowMin();
@@ -651,7 +653,7 @@ function buildReplies(h){
     {id:"fotos", t:"Me pide más fotos", x:`Sí, claro, ahorita se las mando.`},
     {id:"nose", t:"No sé la respuesta", x:`Déjeme confirmarlo y ahorita le aviso.`},
     {id:"seguimiento", t:"No volvió a contestar", x:`Hola, ${saludo()}, ¿todavía le interesa ${h.corto}? Sigue disponible por si gusta ir a verla.`},
-    {id:"info", t:"Mándame toda la info", x:h.texto + (h.mapa?`\n\n📍 ${h.mapa}`:"")},
+    {id:"info", t:"Mándame toda la info", x:h.texto},
   ];
   if(otras) r.push({id:"otras", t:"Ya se vendió → ofrecer otras",
     x:`Esa ya se apartó, pero tengo otras aquí en Madero:\n${otras}\n\n¿Le interesa alguna?`});
@@ -659,8 +661,7 @@ function buildReplies(h){
 }
 function houseView(h){
   const s=hs(h.id),lp=lastPub(h.id),us_=unitsOf(h);
-  const fields=[["Título","titulo",h.titulo],...(h.precioNum?[["Precio","precio",h.precioNum]]:[]),["Descripción","texto",h.texto],["Ubicación","zona",h.zona]];
-  if(h.mapa) fields.push(["Link de Google Maps","mapa",h.mapa]);
+  const fields=[["Título","titulo",h.titulo],...(h.precioNum?[["Precio","precio",h.precioNum]]:[]),["Descripción","texto",h.texto],["Ubicación (zona general)","zonaPublica",h.zonaPublica]];
   const counter=(kind,label,ic,n)=>`<div class="ctr"><span class="ci">${ic}</span><div class="cl"><b>${n}</b><small>${label}</small><em>+${XP[kind]} XP</em></div>
     <button class="cbtn m" data-act="undo" data-k="${kind}" aria-label="Quitar ${label}" ${n?"":"disabled"}>${IC.minus}</button><button class="cbtn" data-act="gain" data-k="${kind}" aria-label="Sumar ${label}">${IC.plus}</button></div>`;
   return `
@@ -670,7 +671,7 @@ function houseView(h){
 
   <section class="card dinfo">
     <div class="dl"><h2>${esc(h.nombre)}</h2><p class="muted">${esc(h.resumen)}</p><b class="dprice">${esc(h.precio)}</b></div>
-    <p class="addr">${IC.pin} ${esc(h.zona)}</p>
+    <p class="addr">${IC.lock} <span><b>Dirección privada</b> (no se publica, sólo va en “¿Dónde está?”): ${esc(h.zona)}</span></p>
   </section>
 
   <section class="card">
@@ -678,7 +679,7 @@ function houseView(h){
     <div class="rows">
       <button class="row" data-act="savefotos"><div><b>Fotos</b><span class="t">Guardar las ${h.fotos.length} fotos (la primera es la portada)</span></div><span class="copy">Guardar</span></button>
       ${fields.map(([k,key,v])=>`<button class="row ${key==="texto"?"main":""}" data-act="field" data-k="${key}"><div><b>${k}</b><span class="t">${esc(v)}</span></div><span class="copy">Copiar</span></button>`).join("")}
-      <button class="row" data-act="group"><div><b>Para un grupo de Facebook</b><span class="t">Frase de apertura + descripción + mapa</span></div><span class="copy">Copiar</span></button>
+      <button class="row" data-act="group"><div><b>Para un grupo de Facebook</b><span class="t">Título y descripción, sin dirección</span></div><span class="copy">Copiar</span></button>
     </div>
     <div class="small">${lp?"Última vez en Marketplace: "+(days(lp)===0?"hoy":"hace "+days(lp)+" días")+` · ${s.pub.length} en total`:"Todavía no la has publicado en Marketplace"}${s.pub.length?` · <button class="linkbtn sm" data-act="undo" data-k="marketplace">deshacer última</button>`:""}</div>
   </section>
@@ -1142,8 +1143,7 @@ document.addEventListener("click",e=>{
     case "published": gain("marketplace",h.id);break;
     case "gain": gain(b.dataset.k,h.id);break;
     case "undo": undoLast(b.dataset.k,h.id);break;
-    case "group": {openerIdx=(openerIdx+1)%OPENERS.length;store.set("opener",openerIdx);
-      copy(OPENERS[openerIdx].replace("{saludo}",cap(saludo()))+"\n\n"+h.texto+(h.mapa?`\n\n📍 ${h.mapa}`:""),b,"Copiado para grupo ✓");break;}
+    case "group": copy(h.texto,b,"Copiado para grupo ✓");break;
     case "field": {const k=b.dataset.k;copy(k==="precio"?(h.precioNum||""):h[k],b);break;}
     case "reply": {const r=buildReplies(h).find(x=>x.id===b.dataset.rid);
       copy(replyText(h,r),b,"Copiado, pégalo en Messenger ✓",()=>{
