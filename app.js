@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.2.0";
+const APP_VERSION = "3.3.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -485,9 +485,9 @@ function render(){
   else if(t==="casas") html=view.id?houseView(house(view.id)):casasView();
   else if(t==="publicar") html=publicarView();
   else if(t==="logros") html=logrosView();
-  else if(t==="perfil") html=view.sub==="grupos"?gruposView():perfilView();
+  else if(t==="perfil") html=view.sub==="grupos"?gruposView():view.sub==="verificar"?verificarView():perfilView();
   else if(t==="fin") html=finView();
-  const detail=(t==="casas"&&view.id)||t==="fin";
+  const detail=(t==="casas"&&view.id)||t==="fin"||(t==="perfil"&&view.sub==="verificar");
   $("#app").innerHTML=(detail?"":t==="inicio"?`<div class="safe-top"></div>`:topXP())+html;
   document.body.classList.toggle("nonav",!!detail);
   renderNav();
@@ -849,6 +849,7 @@ function perfilView(){
   <section class="section"><div class="sechead"><h3>Ajustes</h3></div>
     <div class="card setlist">
       <button class="setrow" data-act="tab" data-t="perfil" data-sub="grupos"><span class="si">${IC.users}</span><span class="sl">Grupos de Facebook<small>${groups.filter(g=>!g.paused).length} activos · links, pausar, agregar</small></span>${IC.chev}</button>
+      <button class="setrow" data-act="tab" data-t="perfil" data-sub="verificar"><span class="si">${IC.check}</span><span class="sl">Verificar grupos<small>Revisa link por link a qué grupo pertenece</small></span>${IC.chev}</button>
       ${tog("sound",game.sound,game.sound?IC.sound:IC.mute,"Sonidos")}
       ${tog("vibra",game.vibra,IC.vibra,"Vibración")}
       <div class="setrow col"><span class="sl">Apariencia</span><div class="pills">${[["auto","Automático"],["light","Claro"],["dark","Oscuro"]].map(([k,l])=>`<button class="ptab ${cfg.theme===k?"on":""}" data-act="theme" data-v="${k}">${l}</button>`).join("")}</div></div>
@@ -900,6 +901,7 @@ function gruposView(){
   return `
   <div class="dtop"><button class="rbtn" data-act="tab" data-t="perfil" aria-label="Regresar">${IC.back}</button><h2>Grupos</h2><button class="rbtn" data-act="gadd" aria-label="Agregar grupo">${IC.plus}</button></div>
   <p class="loc center">${groups.length} grupos · ${act} activos</p>
+  <button class="btn dark full" data-act="tab" data-t="perfil" data-sub="verificar" style="margin:4px 0 14px">${IC.check} Verificar grupos (link por link)</button>
   <div class="chips">${Object.entries(GROUP_TYPES).map(([k,l])=>`<span class="chip static">${esc(l)} · ${cnt(k)}</span>`).join("")}</div>
   <div class="glist">
     ${groups.map((g,i)=>{const it=plan&&plan.items.find(x=>x.g===g.id&&!x.gone);const hasUrl=!!safeUrl(g.url);return `
@@ -944,6 +946,102 @@ function groupSheet(id){
     if(a==="del"){if(!confirm(`¿Borrar "${g.name}"?`))return;groups=groups.filter(x=>x.id!==g.id);saveGroups();rebuildToday();closeSheet();render();toast("Grupo borrado")}
   });
 }
+
+/* ======================================================================
+   VERIFICAR GRUPOS: muestra cada link sin nombre y tú eliges de qué grupo es.
+   Se guarda un borrador por si sales a medio camino.
+   ====================================================================== */
+function verifyStart(fresh){
+  const old=store.get("verifyDraft",null);
+  if(old&&!fresh&&old.links&&old.links.length)return old;
+  const links=[...new Set(groups.map(g=>safeUrl(g.url)).filter(Boolean))];
+  const picks={};
+  // si ya verificaste antes, arranca con lo que guardaste para que sólo corrijas
+  if(store.get("verified",false)) links.forEach((u,i)=>{const g=groups.find(x=>safeUrl(x.url)===u);if(g)picks[i]={g:g.id}});
+  const d={links,picks,i:0};store.set("verifyDraft",d);return d;
+}
+let vd=null;
+const vSave = () => store.set("verifyDraft",vd);
+const vReady = p => !!p&&!!(p.none||p.g||(p.name!=null&&p.name.trim()));
+const pickName = p => !p?"":p.none?"No lo reconozco (sin grupo)":p.name!=null?p.name:(group(p.g)||{name:"(grupo borrado)"}).name;
+const shortUrl = u => u.replace(/^https?:\/\/(www\.)?/,"").replace(/\/$/,"");
+function verificarView(){
+  vd ||= verifyStart(false);
+  const N=vd.links.length;
+  const back=`<button class="rbtn" data-act="tab" data-t="perfil" aria-label="Regresar">${IC.back}</button>`;
+  if(!N) return `<div class="dtop">${back}<h2>Verificar grupos</h2><span class="rbtn ghostspace"></span></div>
+    <div class="empty"><div class="e">🔗</div><h3>No hay links guardados</h3><p>Pon los links en Perfil → Grupos.</p></div>`;
+  const i=Math.min(vd.i,N);
+  const head=`<div class="dtop">${back}<h2>Verificar grupos</h2><button class="rbtn" data-act="vrestart" aria-label="Empezar de nuevo">${IC.x}</button></div>
+    <div class="vprog"><div class="bar"><i style="width:${pct(i,N)}%"></i></div><small>${i<N?`Link ${i+1} de ${N}`:"Resumen"}</small></div>`;
+  if(i>=N) return head+verifySummary();
+  const p=vd.picks[i]||null;
+  const usedBy={};Object.entries(vd.picks).forEach(([k,v])=>{if(+k!==i&&v&&v.g)usedBy[v.g]=+k+1});
+  const other=!!(p&&p.name!=null);
+  return head+`
+  <section class="card vlink">
+    <span class="vnum">Link ${i+1} de ${N}</span>
+    <code class="vurl">${esc(shortUrl(vd.links[i]))}</code>
+    <a class="btn primary big" href="${esc(vd.links[i])}" target="_blank" rel="noopener">${IC.ext} Abrir</a>
+    <p class="small center">Ábrelo, fíjate cómo se llama el grupo y regresa a elegirlo.</p>
+  </section>
+  <section class="section"><div class="sechead"><h3>¿Qué grupo es?</h3>${p?`<span class="pill acc">elegido</span>`:""}</div>
+    <div class="vlist">
+      ${groups.map(g=>{const on=!!(p&&p.g===g.id),used=usedBy[g.id];return `<button class="vopt ${on?"on":""}" data-act="vpick" data-v="${g.id}" ${used?"disabled":""}><span class="vr">${on?IC.check:""}</span><span class="vn">${esc(g.name)}</span>${used?`<span class="pill">Link ${used}</span>`:""}</button>`}).join("")}
+      <button class="vopt ${other?"on":""}" data-act="vpick" data-v="__otro"><span class="vr">${other?IC.check:""}</span><span class="vn">Otro grupo (escribir el nombre)</span></button>
+      ${other?`<input class="inp" id="v-name" placeholder="Nombre del grupo" value="${esc(p.name)}" autocomplete="off">`:""}
+      <button class="vopt ${p&&p.none?"on":""}" data-act="vpick" data-v="__none"><span class="vr">${p&&p.none?IC.check:""}</span><span class="vn">No lo reconozco / no abre</span></button>
+    </div>
+  </section>
+  <div class="sticky vnav"><div class="row2"><button class="btn ghost" data-act="vprev" ${i===0?"disabled":""}>Anterior</button><button class="btn primary" data-act="vnext" ${vReady(p)?"":"disabled"}>${i===N-1?"Ver resumen":"Siguiente"}</button></div></div>`;
+}
+/* qué va a pasar al guardar */
+function verifyPlan(){
+  const byGroup={},nuevos=[];
+  vd.links.forEach((u,i)=>{const p=vd.picks[i];if(!vReady(p)||p.none)return;
+    if(p.g)byGroup[p.g]=u;
+    else{const nm=p.name.trim(),ex=groups.find(g=>g.name.trim().toLowerCase()===nm.toLowerCase());
+      if(ex&&!byGroup[ex.id])byGroup[ex.id]=u;else nuevos.push({name:nm,url:u})}});
+  const sinLink=groups.filter(g=>!byGroup[g.id]);
+  return {byGroup,nuevos,sinLink};
+}
+function verifySummary(){
+  const N=vd.links.length,faltan=vd.links.filter((_,i)=>!vReady(vd.picks[i])).length;
+  const {nuevos,sinLink}=verifyPlan();
+  return `
+  <section class="card"><div class="sechead"><h3>Resumen</h3><span class="muted sm">${N-faltan}/${N} elegidos</span></div>
+    <div class="vsum">${vd.links.map((u,i)=>{const p=vd.picks[i],ok=vReady(p);return `<div class="vrow ${ok?"":"miss"}"><span class="vk">${i+1}</span><div class="vt"><b>${esc(ok?pickName(p):"Sin elegir")}</b><small>${esc(shortUrl(u))}</small></div><button class="linkbtn sm" data-act="vgo" data-i="${i}">cambiar</button></div>`}).join("")}</div>
+  </section>
+  ${nuevos.length?`<p class="small">Se agregarán como grupos nuevos: ${nuevos.map(n=>"<b>"+esc(n.name)+"</b>").join(", ")}.</p>`:""}
+  ${sinLink.length?`<p class="small">Se quedan sin link (el botón dirá “Buscar”): ${sinLink.map(g=>esc(g.name)).join(", ")}.</p>`:""}
+  <div class="sticky vnav"><div class="row2"><button class="btn ghost" data-act="vprev">Anterior</button><button class="btn primary" data-act="vsave" ${faltan?"disabled":""}>${faltan?`Faltan ${faltan}`:"Guardar"}</button></div></div>`;
+}
+function verifySave(){
+  const {byGroup,nuevos}=verifyPlan();
+  groups.forEach(g=>{g.url=byGroup[g.id]||""});
+  let n=groups.reduce((m,x)=>Math.max(m,+x.id.slice(1)||0),0);
+  nuevos.forEach(x=>groups.push({id:"g"+(++n),name:x.name,url:x.url,type:"general",paused:false}));
+  saveGroups();store.set("verified",true);store.set("verifyDraft",null);vd=null;
+  if(nuevos.length)rebuildToday();
+  sfx("medal");haptic();toast("Links guardados ✓");go({tab:"perfil",sub:"grupos"});
+}
+function verifyAct(act,b){
+  vd ||= verifyStart(false);
+  const N=vd.links.length,i=vd.i;
+  if(act==="vpick"){const v=b.dataset.v;
+    vd.picks[i]=v==="__none"?{none:true}:v==="__otro"?{name:(vd.picks[i]&&vd.picks[i].name)||""}:{g:v};
+    vSave();render();if(v==="__otro")setTimeout(()=>{const x=$("#v-name");x&&x.focus()},50);return}
+  if(act==="vnext"){if(!vReady(vd.picks[i]))return;vd.i=Math.min(N,i+1);vSave();render();window.scrollTo(0,0);return}
+  if(act==="vprev"){vd.i=Math.max(0,i-1);vSave();render();window.scrollTo(0,0);return}
+  if(act==="vgo"){vd.i=+b.dataset.i;vSave();render();window.scrollTo(0,0);return}
+  if(act==="vrestart"){if(confirm("¿Empezar de nuevo? Se borra lo que llevas elegido en esta verificación.")){store.set("verified",false);vd=verifyStart(true);render();window.scrollTo(0,0)}return}
+  if(act==="vsave")verifySave();
+}
+document.addEventListener("input",e=>{
+  if(e.target.id!=="v-name"||!vd)return;
+  vd.picks[vd.i]={name:e.target.value};vSave();
+  const nx=document.querySelector('[data-act="vnext"]');if(nx)nx.disabled=!e.target.value.trim();
+});
 
 /* ----- JUEGO COMPLETADO ----- */
 function finView(){
@@ -1067,6 +1165,7 @@ document.addEventListener("click",e=>{
     /* grupos */
     case "gadd": groupSheet(null);break;
     case "gedit": groupSheet(b.dataset.g);break;
+    case "vpick": case "vnext": case "vprev": case "vgo": case "vrestart": case "vsave": verifyAct(act,b);break;
     case "gpause": {const g=group(b.dataset.g);g.paused=!g.paused;saveGroups();rebuildToday();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez");break;}
     case "resetgroups": if(confirm("¿Volver a la lista original de grupos? Se pierden los cambios que les hiciste.")){groups=clone(DEFAULT_GROUPS);saveGroups();rebuildToday();render();toast("Lista original restaurada")}break;
     /* perfil */
