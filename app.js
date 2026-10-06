@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.0.0";
+const APP_VERSION = "3.1.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -7,7 +7,7 @@ const store = {
   set(k,v){try{localStorage.setItem("casas:"+k,JSON.stringify(v))}catch(e){}}
 };
 const clone = o => JSON.parse(JSON.stringify(o));
-const DEFAULT_CFG = {blocks:["14:00","20:00"], gap:2, goals:{pub:7,conv:15,vis:3}, theme:"auto"};
+const DEFAULT_CFG = {blocks:["14:00","20:00"], gap:2, goals:{grupos:100,pub:7,conv:15,vis:3}, theme:"auto"};
 
 let state  = store.get("state",{});
 let custom = store.get("custom2",{});
@@ -233,7 +233,7 @@ function weekDays(){
   const d=new Date(),wd=(d.getDay()+6)%7;
   return [...Array(7)].map((_,i)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()-wd+i));
 }
-const thisWeek = () => G.weeks[weekKey(new Date())]||{pub:0,conv:0,vis:0};
+const thisWeek = () => G.weeks[weekKey(new Date())]||{grupos:0,pub:0,conv:0,vis:0};
 
 /* ---------- copiar ---------- */
 function copySync(text){
@@ -477,7 +477,7 @@ function render(){
   else if(t==="perfil") html=view.sub==="grupos"?gruposView():perfilView();
   else if(t==="fin") html=finView();
   const detail=(t==="casas"&&view.id)||t==="fin";
-  $("#app").innerHTML=(detail?"":topXP())+html;
+  $("#app").innerHTML=(detail?"":t==="inicio"?`<div class="safe-top"></div>`:topXP())+html;
   document.body.classList.toggle("nonav",!!detail);
   renderNav();
 }
@@ -521,19 +521,22 @@ function inicioView(){
   const due=duePending();
   const wk=thisWeek();
   const ganado=G.sold*COMISION,activos=G.active.filter(u=>us(u.id).status!=="vend").length,enJuego=activos*COMISION;
-  // banner del cofre
-  let banner;
-  if(p.chest){const r=rewardTxt(p.chest.reward);
-    banner=`<div class="promo done"><div class="pr-l"><span class="eyebrow">${IC.check} Listo por hoy</span><h3>Ya cumpliste. Vete a estudiar 📚</h3><p>Cofre de hoy: ${esc(r.t)}</p></div><div class="pr-art">📚</div></div>`;
-  }else if(!left){
-    banner=`<div class="promo"><div class="pr-l"><span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>¡Tu cofre está listo!</h3><button class="btn primary sm" data-act="chest">Abrir cofre</button></div><div class="pr-art shake">🎁</div></div>`;
-  }else{
-    banner=`<div class="promo"><div class="pr-l"><span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>Abre tu cofre: te ${left===1?"falta 1 misión":`faltan ${left} misiones`}</h3><button class="btn primary sm" data-act="tab" data-t="publicar">${due?`Publicar ahora · ${due}`:"Ir a publicar"}</button></div><div class="pr-art">🎁</div></div>`;
-  }
+  // cofre + misiones de hoy (una sola tarjeta oscura)
   const mrow=m=>{const [a,b]=missionProgress(m,t),ok=a>=b;return `<div class="mrow ${ok?"ok":""}"><span class="mchk">${ok?IC.check:""}</span><span class="mt">${esc(MISSION_TXT[m.type](m))}</span><span class="mp">${Math.min(a,b)}/${b}</span></div>`};
+  let chestHead;
+  if(p.chest) chestHead=`<span class="eyebrow">${IC.check} Listo por hoy · cofre: ${esc(rewardTxt(p.chest.reward).t)}</span><h3>Ya cumpliste. Vete a estudiar 📚</h3>`;
+  else if(!left) chestHead=`<span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>¡Tu cofre está listo!</h3>`;
+  else chestHead=`<span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>Te ${left===1?"falta 1 misión":`faltan ${left} misiones`}</h3>`;
+  // botón grande: siguiente bloque
+  const cur=currentItem(p);let cta;
+  if(!cur) cta=`<button class="btn dark big cta" data-act="tab" data-t="publicar">${IC.check} Grupos de hoy listos</button>`;
+  else{
+    const b=cur.b,start=blockStart(b),n=p.items.filter(i=>i.b===b&&!i.done&&!i.gone).length,now=start<=nowMin();
+    cta=`<button class="btn primary big cta" data-act="tab" data-t="publicar"><span class="ctal">${IC.send}<span><b>Publicar ahora</b><small>${now?"Ya toca: ":"Siguiente: "}bloque de las ${fmtMin(start)}</small></span></span><span class="ctan"><b>${n}</b><small>grupo${n===1?"":"s"}</small></span></button>`;
+  }
   const goal=(label,val,target,bonus)=>`<div class="goal ${val>=target?"hit":""}"><div class="gl"><span>${label}</span><b>${val}<small> / ${target}</small></b></div><div class="bar"><i style="width:${pct(val,target)}%"></i></div><small class="gb">${val>=target?"✓ ":""}+${bonus} XP</small></div>`;
   return `
-  <header class="hdr">
+  <header class="hdr compact">
     <div class="hdr-l">${avatar()}<div><h1>Hola, Ivan</h1><p class="loc">${IC.pin} Tampico · Madero</p></div></div>
     <div class="hdr-r">
       <button class="rbtn" data-act="quick" aria-label="Registrar algo">${IC.plus}</button>
@@ -541,28 +544,28 @@ function inicioView(){
     </div>
   </header>
 
-  <section class="card lvcard">
-    <div class="lvtop">
-      <div class="lvnum">${G.level}</div>
-      <div class="lvinfo"><b>${esc(G.rank)}</b><small>${num(G.xp)} XP · hoy +${num(G.today)}</small></div>
-      <div class="lvchips">${streakChip()}<span class="shields" title="Escudos de racha">${IC.shield}<b>${G.shieldsLeft}</b></span></div>
-    </div>
-    <div class="xpbar big"><i style="width:${pct(G.into,G.need)}%"></i></div>
-    <div class="lvfoot"><span>${num(G.into)} / ${num(G.need)} XP</span><span>Faltan <b>${num(G.need-G.into)} XP</b> para nivel ${G.level+1}</span></div>
-    ${G.x2today?`<div class="x2line">${IC.zap} Hoy tu XP vale doble</div>`:""}
+  <button class="card lvline" data-act="tab" data-t="logros" aria-label="Nivel ${G.level}, ${G.rank}">
+    <span class="lvnum sm">${G.level}</span>
+    <span class="lvmid"><span class="lvrow"><b>${esc(G.rank)}</b><small>${G.x2today?"⚡ x2 · ":""}+${num(G.today)} hoy</small></span>
+      <span class="xpbar"><i style="width:${pct(G.into,G.need)}%"></i></span>
+      <small>${num(G.need-G.into)} XP para nivel ${G.level+1}</small></span>
+    <span class="lvchips">${streakChip()}<span class="shields" title="Escudos de racha">${IC.shield}<b>${G.shieldsLeft}</b></span></span>
+  </button>
+
+  <section class="promo chestcard ${p.chest?"done":""}">
+    <div class="ch-top"><div class="pr-l">${chestHead}</div><div class="pr-art ${!left&&!p.chest?"shake":""}">${p.chest?"📚":"🎁"}</div></div>
+    <div class="ch-ms">${ms.map(mrow).join("")}</div>
+    ${!left&&!p.chest?`<button class="btn primary full" data-act="chest">Abrir cofre</button>`:""}
   </section>
 
-  ${banner}
-  <section class="card missions">
-    <div class="sechead"><h3>Misiones de hoy</h3><span class="muted sm">${3-left}/3</span></div>
-    ${ms.map(mrow).join("")}
-  </section>
+  ${cta}
 
   ${missionCard()}
 
   <section class="section">
     <div class="sechead"><h3>Metas de la semana</h3><span class="muted sm">bonus de XP</span></div>
     <div class="card goals">
+      ${goal("Publicaciones en grupos",wk.grupos||0,cfg.goals.grupos,BONUS_SEMANA.grupos)}
       ${goal("Publicaciones en Marketplace",wk.pub,cfg.goals.pub,BONUS_SEMANA.pub)}
       ${goal("Conversaciones",wk.conv,cfg.goals.conv,BONUS_SEMANA.conv)}
       ${goal("Visitas",wk.vis,cfg.goals.vis,BONUS_SEMANA.vis)}
@@ -861,6 +864,7 @@ function perfilView(){
 
   <section class="section"><div class="sechead"><h3>Metas semanales</h3></div>
     <div class="card">
+      <div class="field"><span>Publicaciones en grupos</span>${step("ggrupos",cfg.goals.grupos)}</div>
       <div class="field"><span>Publicaciones en Marketplace</span>${step("gpub",cfg.goals.pub)}</div>
       <div class="field"><span>Conversaciones</span>${step("gconv",cfg.goals.conv)}</div>
       <div class="field"><span>Visitas</span>${step("gvis",cfg.goals.vis)}</div>
@@ -1058,7 +1062,7 @@ document.addEventListener("click",e=>{
     case "sound": game.sound=!game.sound;saveGame();render();if(game.sound)sfx("xp");break;
     case "vibra": game.vibra=!game.vibra;saveGame();render();haptic();break;
     case "gap": cfg.gap=Math.max(0,Math.min(15,cfg.gap+ +b.dataset.d));saveCfg();render();break;
-    case "gpub": case "gconv": case "gvis": {const k=act.slice(1);cfg.goals[k]=Math.max(1,cfg.goals[k]+ +b.dataset.d);saveCfg();render();break;}
+    case "gpub": case "gconv": case "gvis": case "ggrupos": {const k=act.slice(1),st=k==="grupos"?10:1;cfg.goals[k]=Math.max(st,cfg.goals[k]+st* +b.dataset.d);saveCfg();render();break;}
     case "badd": {const last=toMin(cfg.blocks[cfg.blocks.length-1]);cfg.blocks.push(fmt24(Math.min(23*60,last+120)));saveCfg();rebuildToday();render();break;}
     case "bdel": cfg.blocks.splice(+b.dataset.i,1);saveCfg();rebuildToday();render();break;
     case "ics": if(icsChanged()){e.preventDefault();downloadFile("recordatorios-mis-casas.ics","text/calendar",buildICS())}break;

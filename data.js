@@ -208,7 +208,7 @@ const XP = {
   venta:1000
 };
 /* Bonus de XP al cumplir cada meta semanal */
-const BONUS_SEMANA = {pub:100, conv:150, vis:250};
+const BONUS_SEMANA = {grupos:200, pub:100, conv:150, vis:250};
 
 /* Frases para motivarte: cortas y al grano */
 const FRASES = [

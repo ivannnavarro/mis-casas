@@ -2,7 +2,7 @@
    - index, app.js, data.js, app.css: primero internet (para traer cambios), si no hay señal usa la copia guardada.
    - fotos: se guardan en el celular y se usan sin internet.
    Si cambias algo y quieres forzar que se borre todo lo guardado, sube el número de VERSION. */
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL = "shell-" + VERSION;
 const PHOTOS = "fotos-v1";
 const CORE = ["./","index.html","app.css","app.js","game.js","data.js","manifest.webmanifest",

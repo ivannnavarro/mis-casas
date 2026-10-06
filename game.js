@@ -141,16 +141,17 @@ function calc(){
     tot[e.k]++;
     if(DMG[e.k]){dmg[e.h]=(dmg[e.h]||0)+DMG[e.k]}
     if(!last[e.h]||e.t>last[e.h])last[e.h]=e.t;
-    const w=weekKey(e.t),W=(weeks[w] ||= {pub:0,conv:0,vis:0});
-    if(e.k==="marketplace")W.pub++;if(e.k==="interesado")W.conv++;if(e.k==="visitaHecha")W.vis++;
+    const w=weekKey(e.t),W=(weeks[w] ||= {grupos:0,pub:0,conv:0,vis:0});
+    if(e.k==="grupo")W.grupos++;if(e.k==="marketplace")W.pub++;if(e.k==="interesado")W.conv++;if(e.k==="visitaHecha")W.vis++;
   }
   game.replies.forEach(t=>{const c=(dc[ymd(t)] ||= {xp:0});c.reply=(c.reply||0)+1});
   let weekBonus=0,perfectWeeks=0;
   for(const w in weeks){const W=weeks[w];let n=0;
+    if(W.grupos>=cfg.goals.grupos){weekBonus+=BONUS_SEMANA.grupos;n++}
     if(W.pub>=cfg.goals.pub){weekBonus+=BONUS_SEMANA.pub;n++}
     if(W.conv>=cfg.goals.conv){weekBonus+=BONUS_SEMANA.conv;n++}
     if(W.vis>=cfg.goals.vis){weekBonus+=BONUS_SEMANA.vis;n++}
-    if(n===3)perfectWeeks++}
+    if(n===4)perfectWeeks++}
   const bonus=game.bonus.reduce((a,b)=>a+b.xp,0);
   game.bonus.forEach(b=>{const c=(dc[ymd(b.t)] ||= {xp:0});c.xp+=b.xp});
   xp+=weekBonus+bonus;
@@ -210,7 +211,7 @@ const MEDALS = [
   {id:"vis10",  e:"🏡", n:"Anfitrión",           d:"Haz 10 visitas", ok:()=>G.tot.visitaHecha>=10},
   {id:"cofre1", e:"🎁", n:"Primer cofre",        d:"Abre tu primer cofre", ok:()=>G.chests>=1},
   {id:"cofre10",e:"🧰", n:"Coleccionista",       d:"Abre 10 cofres", ok:()=>G.chests>=10},
-  {id:"semana", e:"🏅", n:"Semana perfecta",     d:"Cumple las 3 metas de una semana", ok:()=>G.perfectWeeks>=1},
+  {id:"semana", e:"🏅", n:"Semana perfecta",     d:"Cumple las 4 metas de una semana", ok:()=>G.perfectWeeks>=1},
   ...HOUSES.map(h=>({id:"conq_"+h.id, e:(h.jefe||(h.unidades&&h.unidades[0].jefe)||{e:"🏆"}).e, n:"Conquistar "+(h.chip||h.nombre),
      d:h.unidades?`Aparta o vende las ${h.unidades.length} casas`:"Aparta o vende la casa", ok:()=>!!G.conq[h.id]})),
   {id:"vendedor",e:"🤝",n:"Rango Vendedor",      d:"Llega al nivel 6", ok:()=>G.level>=6},
