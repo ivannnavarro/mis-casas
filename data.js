@@ -145,29 +145,36 @@ const GROUP_TYPES = {
   unidad:  "Unidad Nacional"
 };
 
+/* El id (g1, g3...) es fijo: así el celular reconoce cada grupo aunque cambies el nombre o el link.
+   "Tampico Ventas" (g2) se quitó. */
 const DEFAULT_GROUPS = [
-  ["Casas y terrenos en venta y renta en Tampico, Madero y Altamira","inmo"],
-  ["Tampico Ventas","general"],
-  ["Ampliación Unidad Nacional (ventas y Servicios)","unidad"],
-  ["VENTAM BIENES RAICES","inmo"],
-  ["VENTAM","general"],
-  ["VENTA Y RENTA DE CASAS, LOCALES EN Tampico, Madero y Altamira","inmo"],
-  ["Ventas Seguras Tampico, Madero y Altamira","general"],
-  ["VEMTAN : TAMPICO-MADERO-ALTAMIRA","general"],
-  ["LA AMPLIACION UNIDAD NACIONAL Ventas / Intercambios / Anuncios","unidad"],
-  ["COLONIA UNIDAD NACIONAL CD. MADERO TAMAULIPAS","unidad"],
-  ["VENTAS TAMPICO,MADERO Y ALTAMIRA","general"],
-  ["VentasLagunadelcarpintero","general"],
-  ["VENTA Y RENTA DE CASAS EN TAMPICO, MADERO Y ALTAMIRA","inmo"],
-  ["Bienes Raíces Tampico, Madero y Altamira","inmo"],
-  ["TAMPICOMPRAS Y MAS","general"],
-  ["Ventas Colonia Tamaulipas","general"],
-  ["Casas, Terrenos y locales comerciales Tampico/Madero/Altamira","inmo"],
-  ["Altama venta y renta de casas depas y terrenos","inmo"],
-  ["Bienes Raíces Altamira, Madero y Tampico Almatam","inmo"],
-  ["Venta Local (Tampico - Madero - Altamira)","general"],
-  ["VENTAM CASAS","inmo"]
-].map(([name,type],i)=>({id:"g"+(i+1), name, type, url:"", paused:false}));
+  ["g1","Casas y terrenos en venta y renta en Tampico, Madero y Altamira","inmo","https://www.facebook.com/share/g/1NYszRM8o1/"],
+  ["g3","Ampliación Unidad Nacional (ventas y Servicios)","unidad","https://www.facebook.com/share/g/14qVaGv2br8/"],
+  ["g4","VENTAM BIENES RAICES","inmo","https://www.facebook.com/share/g/1Ff4LSPm3r/"],
+  ["g5","VENTAM","general","https://www.facebook.com/share/g/18n3AbzmBy/"],
+  ["g6","VENTA Y RENTA DE CASAS, LOCALES EN Tampico, Madero y Altamira","inmo","https://www.facebook.com/share/g/1EVkqyenxY/"],
+  ["g7","Ventas Seguras Tampico, Madero y Altamira","general","https://www.facebook.com/share/g/1C11k1AzQn/"],
+  ["g8","VEMTAN : TAMPICO-MADERO-ALTAMIRA","general","https://www.facebook.com/share/g/1DLSUG85rb/"],
+  ["g9","LA AMPLIACION UNIDAD NACIONAL Ventas / Intercambios / Anuncios","unidad","https://www.facebook.com/share/g/1Cemnsm9Ef/"],
+  ["g10","COLONIA UNIDAD NACIONAL CD. MADERO TAMAULIPAS","unidad","https://www.facebook.com/share/g/1DGjPFPLRm/"],
+  ["g11","VENTAS TAMPICO,MADERO Y ALTAMIRA","general","https://www.facebook.com/share/g/1E6sJwKksV/"],
+  ["g12","VentasLagunadelcarpintero","general","https://www.facebook.com/share/g/1Et4UQLuk2/"],
+  ["g13","VENTA Y RENTA DE CASAS EN TAMPICO, MADERO Y ALTAMIRA","inmo","https://www.facebook.com/share/g/19VtkKan5C/"],
+  ["g14","Bienes Raíces Tampico, Madero y Altamira","inmo","https://www.facebook.com/share/g/1GdpbGuWk2/"],
+  ["g15","TAMPICOMPRAS Y MAS","general","https://www.facebook.com/share/g/1MFriPYdUg/"],
+  ["g16","Ventas Colonia Tamaulipas","general","https://www.facebook.com/share/g/1JYLantJ1o/"],
+  ["g17","Casas, Terrenos y locales comerciales Tampico/Madero/Altamira","inmo","https://www.facebook.com/share/g/1FN8Zgsa1w/"],
+  ["g18","Altama venta y renta de casas depas y terrenos","inmo","https://www.facebook.com/share/g/1HKXyBpdZo/"],
+  ["g19","Bienes Raíces Altamira, Madero y Tampico Almatam","inmo","https://www.facebook.com/share/g/1HP7kD2ozR/"],
+  ["g20","Venta Local (Tampico - Madero - Altamira)","general","https://www.facebook.com/share/g/1BztnUhDxp/"],
+  ["g21","VENTAM CASAS","inmo","https://www.facebook.com/share/g/1FGwxMssnh/"]
+].map(([id,name,type,url])=>({id, name, type, url, paused:false}));
+
+/* Cambios a los grupos que ya están guardados en el celular. Se aplican una sola vez cada uno
+   (por número de versión), sin tocar lo demás que tengas guardado. */
+const GROUP_UPDATES = [
+  {v:1, remove:["g2"], links:Object.fromEntries(DEFAULT_GROUPS.map(g=>[g.id,g.url]))}
+];
 
 /* Pesos de la rotación (1 = normal). Más alto = sale más seguido en ese tipo de grupo.
    Las apartadas se multiplican por PESO_APARTADA; las vendidas salen solas. */

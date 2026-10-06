@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.1.0";
+const APP_VERSION = "3.2.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -50,8 +50,19 @@ function migrate(){
   });
   HOUSES.forEach(h=>hs(h.id).status=houseStatus(h));
   save();store.set("schema",3);
+  // cambios de grupos (quitar grupos, poner links) sobre la lista guardada en el celular
+  const gv=store.get("groupsV",0);let changed=false;
+  GROUP_UPDATES.filter(u=>u.v>gv).forEach(u=>{
+    const rm=new Set(u.remove||[]);
+    const before=groups.length;
+    groups=groups.filter(g=>!rm.has(g.id));
+    rm.forEach(id=>{delete rot.cur[id];delete rot.last[id]});
+    Object.entries(u.links||{}).forEach(([id,url])=>{const g=groups.find(x=>x.id===id);if(g&&url)g.url=url});
+    changed=changed||groups.length!==before||!!u.links;
+    store.set("groupsV",u.v);
+  });
+  if(changed){saveGroups();if(plans[todayKey()])rebuildToday()}
 }
-migrate();
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -707,7 +718,7 @@ function houseView(h){
 
 /* ----- PUBLICAR AHORA (botón central) ----- */
 function publicarView(){
-  const t=todayKey(),plan=plans[t],items=plan.items.filter(i=>!i.gone||i.done);
+  const t=todayKey(),plan=plans[t],items=plan.items.filter(i=>!i.gone);
   const done=items.filter(i=>i.done).length,total=items.length;
   const cur=currentItem(plan),nm=nowMin(),tab=view.ptab||"ahora";
   const missionsOk=(plan.missions||[]).every(m=>missionDone(m,t));
@@ -728,7 +739,7 @@ function publicarView(){
       :`<div class="blockhead"><h3>Bloque ${b+1} · ${fmtMin(blockStart(b))}</h3><span class="muted sm">${L.filter(i=>i.done).length}/${L.length}</span></div><div class="items">${L.map(it=>itemCard(plan,it,cur,photos)).join("")}</div>`;
   }else{
     const want=tab==="hechas";
-    body=cfg.blocks.map((bt,b)=>{const L=plan.items.filter(i=>i.b===b&&(!i.gone||i.done)&&!!i.done===want);if(!L.length)return "";
+    body=cfg.blocks.map((bt,b)=>{const L=plan.items.filter(i=>i.b===b&&!i.gone&&!!i.done===want);if(!L.length)return "";
       return `<div class="blockhead"><h3>Bloque ${b+1} · ${fmtMin(toMin(bt))}</h3><span class="muted sm">${L.length}</span></div><div class="items">${L.map(it=>itemCard(plan,it,cur,photos)).join("")}</div>`}).join("")
       ||`<div class="empty"><div class="e">${want?"🫙":"✅"}</div><h3>${want?"Todavía nada palomeado":"Nada pendiente"}</h3></div>`;
   }
@@ -752,13 +763,13 @@ function itemCard(plan,it,cur,photos){
     <div class="ihead">
       <img class="ith" src="${cover(h)}" alt="" loading="lazy">
       <div class="iinfo"><div class="gname">${esc(g.name)}</div>
-        <div class="gmeta"><span>${esc(h.chip||h.nombre)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span></div></div>
+        <div class="gmeta"><span>${esc(h.chip||h.nombre)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
       <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-g="${it.g}">${IC.check}</button>
     </div>
     <div class="acts">
       <button class="act ${it.copied?"did":"pri"}" data-act="gcopy" data-g="${it.g}">${IC.copy}${it.copied?"Copiado":"Copiar texto"}</button>
       <button class="act ${photos[it.h]?"did":""}" data-act="gfotos" data-g="${it.g}">${IC.img}${photos[it.h]?"Fotos ✓":"Fotos"}</button>
-      <a class="act ${it.opened?"did":""}" data-act="gopen" data-g="${it.g}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir":"Buscar"}</a>
+      <a class="act ${it.opened?"did":""}" data-act="gopen" data-g="${it.g}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
     </div>
   </div>`;
 }
@@ -996,7 +1007,7 @@ function afterTick(plan,it,wasBlockDone){
   const n=XP.grupo*(G.x2today?2:1);xpPop(n,"Publicaste en un grupo");sfx("xp");haptic();
   const before=modalQ.length;checkProgress();
   if(modalQ.length>before)return;
-  const L=plan.items.filter(i=>i.b===it.b&&(!i.gone||i.done));
+  const L=plan.items.filter(i=>i.b===it.b&&!i.gone);
   if(L.every(i=>i.done)&&!wasBlockDone){
     const all=plan.items.filter(i=>!i.gone||i.done),rest=all.filter(i=>!i.done).length;
     modal({art:"🎉",title:`¡Bloque de las ${fmtMin(blockStart(it.b))} listo!`,text:`${L.length} grupos publicados.${rest?` Te quedan ${rest} para el siguiente bloque.`:" Terminaste todos los grupos de hoy."}`,confetti:true,sound:"medal"});
@@ -1019,7 +1030,7 @@ document.addEventListener("click",e=>{
     case "chest": openChest();break;
     /* publicar en grupos */
     case "tick": {if(!it)break;
-      const wasBlockDone=plan.items.filter(i=>i.b===it.b&&(!i.gone||i.done)).every(i=>i.done);
+      const wasBlockDone=plan.items.filter(i=>i.b===it.b&&!i.gone).every(i=>i.done);
       it.done=it.done?null:new Date().toISOString();savePlans();render();
       if(!it.done){sfx("tick");toast(`−${XP.grupo} XP`)}
       afterTick(plan,it,wasBlockDone);break;}
@@ -1057,7 +1068,7 @@ document.addEventListener("click",e=>{
     case "gadd": groupSheet(null);break;
     case "gedit": groupSheet(b.dataset.g);break;
     case "gpause": {const g=group(b.dataset.g);g.paused=!g.paused;saveGroups();rebuildToday();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez");break;}
-    case "resetgroups": if(confirm("¿Volver a la lista original de 21 grupos? Se pierden los links que guardaste.")){groups=clone(DEFAULT_GROUPS);saveGroups();rebuildToday();render();toast("Lista original restaurada")}break;
+    case "resetgroups": if(confirm("¿Volver a la lista original de grupos? Se pierden los cambios que les hiciste.")){groups=clone(DEFAULT_GROUPS);saveGroups();rebuildToday();render();toast("Lista original restaurada")}break;
     /* perfil */
     case "sound": game.sound=!game.sound;saveGame();render();if(game.sound)sfx("xp");break;
     case "vibra": game.vibra=!game.vibra;saveGame();render();haptic();break;
@@ -1100,6 +1111,7 @@ document.addEventListener("visibilitychange",refresh);
 setInterval(refresh,60000);
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>render());
 
+migrate();
 render();
 checkProgress();
 setTimeout(()=>{const p=plans[todayKey()];if(p)[...new Set(p.items.map(i=>i.h))].forEach(id=>prepFiles(house(id)))},900);

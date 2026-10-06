@@ -477,3 +477,4 @@ body.nonav .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 @keyframes up{from{transform:translateY(60px);opacity:.3}}
 @keyframes pop{from{transform:scale(.7);opacity:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.btn:active,.act:active,.row:active,.world:active{transform:none}}
+.glink{border:0;background:none;padding:0 0 0 2px;color:var(--accent);font-weight:600;font-size:12.5px;text-decoration:underline;text-underline-offset:2px}
