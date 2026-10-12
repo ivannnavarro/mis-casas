@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.4.0";
+const APP_VERSION = "3.5.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -487,9 +487,9 @@ function render(){
   else if(t==="casas") html=view.id?houseView(house(view.id)):casasView();
   else if(t==="publicar") html=publicarView();
   else if(t==="logros") html=logrosView();
-  else if(t==="perfil") html=view.sub==="grupos"?gruposView():view.sub==="verificar"?verificarView():perfilView();
+  else if(t==="perfil") html=view.sub==="grupos"?gruposView():view.sub==="verificar"?verificarView():view.sub==="tipos"?tiposView():perfilView();
   else if(t==="fin") html=finView();
-  const detail=(t==="casas"&&view.id)||t==="fin"||(t==="perfil"&&view.sub==="verificar");
+  const detail=(t==="casas"&&view.id)||t==="fin"||(t==="perfil"&&(view.sub==="verificar"||view.sub==="tipos"));
   $("#app").innerHTML=(detail?"":t==="inicio"?`<div class="safe-top"></div>`:topXP())+html;
   document.body.classList.toggle("nonav",!!detail);
   renderNav();
@@ -679,6 +679,7 @@ function houseView(h){
     <div class="rows">
       <button class="row" data-act="savefotos"><div><b>Fotos</b><span class="t">Guardar las ${h.fotos.length} fotos (la primera es la portada)</span></div><span class="copy">Guardar</span></button>
       ${fields.map(([k,key,v])=>`<button class="row ${key==="texto"?"main":""}" data-act="field" data-k="${key}"><div><b>${k}</b><span class="t">${esc(v)}</span></div><span class="copy">Copiar</span></button>`).join("")}
+      <button class="row" data-act="mktlink" data-id="${h.id}"><div><b>Link de mi publicación en Marketplace</b><span class="t">${safeUrl(s.mktUrl)?esc(s.mktUrl):"Sin guardar · para compartirla en grupos de venta sin duplicarla"}</span></div><span class="copy">${safeUrl(s.mktUrl)?"Cambiar":"Guardar"}</span></button>
       <button class="row" data-act="group"><div><b>Para un grupo de Facebook</b><span class="t">Título y descripción, sin dirección</span></div><span class="copy">Copiar</span></button>
     </div>
     <div class="small">${lp?"Última vez en Marketplace: "+(days(lp)===0?"hoy":"hace "+days(lp)+" días")+` · ${s.pub.length} en total`:"Todavía no la has publicado en Marketplace"}${s.pub.length?` · <button class="linkbtn sm" data-act="undo" data-k="marketplace">deshacer última</button>`:""}</div>
@@ -746,6 +747,7 @@ function publicarView(){
   }
   return `
   <header class="hdr"><div><h1>Publicar ahora</h1><p class="loc">${cap(new Date().toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"}))}</p></div><div class="hdr-r">${streakChip()}</div></header>
+  ${groups.some(g=>!g.paused&&!g.modo)?`<button class="tipobanner" data-act="tab" data-t="perfil" data-sub="tipos">${IC.target}<span><b>¿Algún grupo te pide “Vender artículo”?</b><small>Revisa tus grupos para no duplicar tus casas en Marketplace · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>`:""}
   ${missionsOk?`<div class="okbanner">${IC.check} Ya cumpliste tus misiones de hoy. Lo demás es extra; si quieres, vete a estudiar 📚</div>`:""}
   <section class="card dayhead">
     <div class="nums"><b>${done}<span> / ${total}</span></b><em>grupos hoy<br>+${XP.grupo} XP cada uno</em></div>
@@ -763,15 +765,21 @@ function itemCard(plan,it,cur,photos){
   return `<div class="item ${it.done?"done":""} ${isCur?"cur":""}" id="it-${it.g}">
     <div class="ihead">
       <img class="ith" src="${cover(h)}" alt="" loading="lazy">
-      <div class="iinfo"><div class="gname">${esc(g.name)}</div>
+      <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:""}</div>
         <div class="gmeta"><span>${esc(h.chip||h.nombre)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
       <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-g="${it.g}">${IC.check}</button>
     </div>
+    ${g.modo==="venta"?`
+    <div class="ventabox"><b>Este grupo pide “Vender artículo”.</b> No subas la casa otra vez: comparte tu publicación de Marketplace que ya tienes de ${esc(h.chip||h.nombre)} en este grupo.${safeUrl(hs(h.id).mktUrl)?"":` <button class="glink" data-act="mktlink" data-id="${h.id}">guardar el link de tu publicación</button>`}</div>
+    <div class="acts two">
+      <a class="act pri" data-act="mktopen" data-g="${it.g}" href="${esc(mktLink(h))}" target="_blank" rel="noopener">${IC.mega}${safeUrl(hs(h.id).mktUrl)?"Mi publicación":"Mis publicaciones"}</a>
+      <a class="act ${it.opened?"did":""}" data-act="gopen" data-g="${it.g}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
+    </div>`:`
     <div class="acts">
       <button class="act ${it.copied?"did":"pri"}" data-act="gcopy" data-g="${it.g}">${IC.copy}${it.copied?"Copiado":"Copiar texto"}</button>
       <button class="act ${photos[it.h]?"did":""}" data-act="gfotos" data-g="${it.g}">${IC.img}${photos[it.h]?"Fotos ✓":"Fotos"}</button>
       <a class="act ${it.opened?"did":""}" data-act="gopen" data-g="${it.g}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -850,6 +858,7 @@ function perfilView(){
   <section class="section"><div class="sechead"><h3>Ajustes</h3></div>
     <div class="card setlist">
       <button class="setrow" data-act="tab" data-t="perfil" data-sub="grupos"><span class="si">${IC.users}</span><span class="sl">Grupos de Facebook<small>${groups.filter(g=>!g.paused).length} activos · links, pausar, agregar</small></span>${IC.chev}</button>
+      <button class="setrow" data-act="tab" data-t="perfil" data-sub="tipos"><span class="si">${IC.target}</span><span class="sl">Tipo de publicación por grupo<small>${groups.filter(g=>g.modo==="venta").length} piden “Vender artículo” · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>
       <button class="setrow" data-act="tab" data-t="perfil" data-sub="verificar"><span class="si">${IC.check}</span><span class="sl">Verificar grupos<small>Revisa link por link a qué grupo pertenece</small></span>${IC.chev}</button>
       ${tog("sound",game.sound,game.sound?IC.sound:IC.mute,"Sonidos")}
       ${tog("vibra",game.vibra,IC.vibra,"Vibración")}
@@ -909,7 +918,7 @@ function gruposView(){
       <div class="grow ${g.paused?"paused":""}">
         <span class="n">${i+1}</span>
         <button class="nm" data-act="gedit" data-g="${g.id}">${esc(g.name)}
-          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span>${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
+          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span>${g.modo==="venta"?`<span class="pill acc">Vender artículo</span>`:g.modo==="post"?`<span class="pill">Publicación normal</span>`:""}${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
         </button>
         <span class="r">
           <a class="rbtn sm ${hasUrl?"acc":""}" href="${esc(groupHref(g))}" target="_blank" rel="noopener" aria-label="Abrir grupo">${IC.ext}</a>
@@ -1044,6 +1053,67 @@ document.addEventListener("input",e=>{
   const nx=document.querySelector('[data-act="vnext"]');if(nx)nx.disabled=!e.target.value.trim();
 });
 
+/* ======================================================================
+   TIPO DE PUBLICACIÓN POR GRUPO
+   post  = te deja hacer una publicación normal (texto + fotos)
+   venta = te obliga a "Vender artículo" (se crea un artículo en tu Marketplace)
+   ====================================================================== */
+const MODOS = {
+  post:  {n:"Publicación normal", d:"Me deja escribir texto y subir fotos"},
+  venta: {n:"Pide “Vender artículo”", d:"Se crea un artículo nuevo en mi Marketplace"}
+};
+const SELLING_URL = "https://www.facebook.com/marketplace/you/selling";
+const mktLink = h => safeUrl(hs(h.id).mktUrl) || SELLING_URL;
+function tiposView(){
+  const N=groups.length;
+  const back=`<button class="rbtn" data-act="tab" data-t="perfil" aria-label="Regresar">${IC.back}</button>`;
+  if(!N) return `<div class="dtop">${back}<h2>Tipo de grupo</h2><span class="rbtn ghostspace"></span></div><div class="empty"><h3>No hay grupos</h3></div>`;
+  const i=Math.min(view.ti||0,N);
+  const head=`<div class="dtop">${back}<h2>Tipo de grupo</h2><span class="rbtn ghostspace"></span></div>
+    <div class="vprog"><div class="bar"><i style="width:${pct(i,N)}%"></i></div><small>${i<N?`Grupo ${i+1} de ${N}`:"Resumen"}</small></div>`;
+  if(i>=N){
+    const cnt=k=>groups.filter(g=>g.modo===k).length,sin=groups.filter(g=>!g.modo).length;
+    return head+`
+    <section class="card"><div class="sechead"><h3>Resumen</h3><span class="muted sm">${N-sin}/${N} revisados</span></div>
+      <div class="tsum"><div class="stat"><b>${cnt("post")}</b><small>publicación normal</small></div><div class="stat"><b>${cnt("venta")}</b><small>piden “Vender artículo”</small></div></div>
+      <div class="vsum" style="margin-top:10px">${groups.map((g,k)=>`<div class="vrow ${g.modo?"":"miss"}"><span class="vk">${k+1}</span><div class="vt"><b>${esc(g.name)}</b><small>${g.modo?esc(MODOS[g.modo].n):"Sin revisar"}</small></div><button class="linkbtn sm" data-act="tgo" data-i="${k}">cambiar</button></div>`).join("")}</div>
+    </section>
+    <div class="sticky vnav"><div class="row2"><button class="btn ghost" data-act="tprev">Anterior</button><button class="btn primary" data-act="tab" data-t="publicar">Listo</button></div></div>`;
+  }
+  const g=groups[i];
+  return head+`
+  <section class="card vlink">
+    <span class="vnum" style="font-size:20px;line-height:1.25">${esc(g.name)}</span>
+    <a class="btn primary big" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext} Abrir grupo</a>
+    <p class="small center">Ábrelo y toca para crear una publicación. Fíjate si te deja escribir normal o si sólo te deja “Vender artículo”.</p>
+  </section>
+  <section class="section"><div class="sechead"><h3>¿Cómo te deja publicar?</h3></div>
+    <div class="vlist">
+      ${Object.entries(MODOS).map(([k,m])=>`<button class="vopt ${g.modo===k?"on":""}" data-act="tpick" data-v="${k}"><span class="vr">${g.modo===k?IC.check:""}</span><span class="vn">${esc(m.n)}<small class="vd">${esc(m.d)}</small></span></button>`).join("")}
+      <button class="vopt ${!g.modo?"":""}" data-act="tpick" data-v=""><span class="vr"></span><span class="vn">No sé todavía<small class="vd">Lo reviso después</small></span></button>
+    </div>
+  </section>
+  <div class="sticky vnav"><div class="row2"><button class="btn ghost" data-act="tprev" ${i===0?"disabled":""}>Anterior</button><button class="btn primary" data-act="tnext">${i===N-1?"Ver resumen":"Siguiente"}</button></div></div>`;
+}
+function tiposAct(act,b){
+  const N=groups.length,i=Math.min(view.ti||0,N);
+  if(act==="tpick"){const g=groups[i];if(!g)return;const v=b.dataset.v;if(v)g.modo=v;else delete g.modo;saveGroups();haptic();
+    view.ti=Math.min(N,i+1);render();window.scrollTo(0,0);return}
+  if(act==="tnext"){view.ti=Math.min(N,i+1);render();window.scrollTo(0,0);return}
+  if(act==="tprev"){view.ti=Math.max(0,i-1);render();window.scrollTo(0,0);return}
+  if(act==="tgo"){view.ti=+b.dataset.i;render();window.scrollTo(0,0);return}
+}
+function mktSheet(h){
+  const s=openSheet(`<h3>Link de tu publicación en Marketplace</h3>
+    <p class="small" style="margin:0">En Facebook abre tu publicación de <b>${esc(h.nombre)}</b> → <b>Compartir</b> → <b>Copiar enlace</b>, y pégalo aquí. Así, en los grupos que piden “Vender artículo”, la app te lleva directo a esa publicación para compartirla en vez de crear otra.</p>
+    <input class="inp" id="mk-u" type="url" inputmode="url" placeholder="https://www.facebook.com/marketplace/item/..." value="${esc(hs(h.id).mktUrl||"")}" autocomplete="off">
+    <button class="btn primary big" data-m="save">Guardar</button><button class="btn ghost" data-m="x">Cancelar</button>`);
+  s.querySelector('[data-m="x"]').onclick=closeSheet;
+  s.querySelector('[data-m="save"]').onclick=()=>{const u=s.querySelector("#mk-u").value.trim();
+    if(u&&!safeUrl(u)){toast("El link debe empezar con https://");return}
+    hs(h.id).mktUrl=u;save();closeSheet();render();toast(u?"Link guardado ✓":"Link quitado")};
+}
+
 /* ----- JUEGO COMPLETADO ----- */
 function finView(){
   const T=G.tot,season=G.active;
@@ -1121,7 +1191,7 @@ document.addEventListener("click",e=>{
   const plan=plans[todayKey()];
   const it=b.dataset.g&&plan?plan.items.find(x=>x.g===b.dataset.g&&!x.gone):null;
   switch(act){
-    case "tab": go({tab:b.dataset.t,sub:b.dataset.sub});break;
+    case "tab": {const v={tab:b.dataset.t,sub:b.dataset.sub};if(v.sub==="tipos"){const k=groups.findIndex(g=>!g.modo);v.ti=k<0?groups.length:k}go(v);break;}
     case "filter": view.f=b.dataset.f;render();break;
     case "ptab": view.ptab=b.dataset.v;render();break;
     case "ltab": view.ltab=b.dataset.v;render();break;
@@ -1165,6 +1235,9 @@ document.addEventListener("click",e=>{
     /* grupos */
     case "gadd": groupSheet(null);break;
     case "gedit": groupSheet(b.dataset.g);break;
+    case "tpick": case "tnext": case "tprev": case "tgo": tiposAct(act,b);break;
+    case "mktlink": mktSheet(house(b.dataset.id));break;
+    case "mktopen": if(it){it.opened=true;savePlans();setTimeout(render,400)}break;
     case "vpick": case "vnext": case "vprev": case "vgo": case "vrestart": case "vsave": verifyAct(act,b);break;
     case "gpause": {const g=group(b.dataset.g);g.paused=!g.paused;saveGroups();rebuildToday();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez");break;}
     case "resetgroups": if(confirm("¿Volver a la lista original de grupos? Se pierden los cambios que les hiciste.")){groups=clone(DEFAULT_GROUPS);saveGroups();rebuildToday();render();toast("Lista original restaurada")}break;
