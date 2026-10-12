@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.6.0";
+const APP_VERSION = "3.6.1";
 
 /* ---------- storage ---------- */
 const store = {
@@ -66,6 +66,9 @@ function migrate(){
   let fixed=false;
   Object.values(custom).forEach(m=>Object.keys(m).forEach(k=>{if(k!=="ubicacion"&&EXACTA.test(m[k])){delete m[k];fixed=true}}));
   if(fixed)store.set("custom2",custom);
+  let fixedModo=false;
+  groups.forEach(g=>{if(g.modo==="solicitud"){setModo(g,"aprobacion");fixedModo=true}});
+  if(fixedModo){saveGroups();if(plans[todayKey()])rebuildToday()}
 }
 
 /* ---------- helpers ---------- */
@@ -765,7 +768,7 @@ function itemCard(plan,it,cur,photos){
   return `<div class="item ${it.done?"done":""} ${isCur?"cur":""}" id="it-${it.g}">
     <div class="ihead">
       <img class="ith" src="${cover(h)}" alt="" loading="lazy">
-      <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:g.modo==="aprobacion"?` <span class="pill acc tiny">Requiere aprobación</span>`:""}</div>
+      <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:g.modo==="aprobacion"?` <span class="pill acc tiny">Requiere autorización</span>`:""}</div>
         <div class="gmeta"><span>${esc(h.chip||h.nombre)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
       <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-g="${it.g}">${IC.check}</button>
     </div>
@@ -1066,11 +1069,10 @@ document.addEventListener("input",e=>{
 const MODOS = {
   post:       {n:"Publicación normal",              d:"Me deja escribir texto y subir fotos", corto:"Publicación normal"},
   venta:      {n:"Pide “Vender artículo”",          d:"Se crea un artículo nuevo en mi Marketplace", corto:"Vender artículo"},
-  aprobacion: {n:"Normal, pero la aprueba un admin",d:"Mi publicación se queda pendiente hasta que la aprueben", corto:"Requiere aprobación"},
-  solicitud:  {n:"Todavía no me aceptan",           d:"Pedí unirme y el admin no me ha aceptado · se pausa", corto:"Esperando que me acepten", pausa:true},
+  aprobacion: {n:"Necesita autorización del admin", d:"Mi publicación se queda pendiente hasta que el admin la apruebe", corto:"Requiere autorización"},
   lectura:    {n:"Solo lectura / pausado",          d:"Nadie puede publicar por ahora · se pausa", corto:"Solo lectura", pausa:true}
 };
-/* cambia cómo te deja publicar un grupo; los de "solicitud" y "solo lectura" se pausan solos
+/* cambia cómo te deja publicar un grupo; los de "solo lectura" se pausan solos
    y se reactivan solos cuando les pones otro tipo */
 function setModo(g,v){
   const wasPaused=!!g.paused;
