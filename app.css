@@ -514,3 +514,4 @@ body.nonav .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .tipobanner small{color:var(--muted);font-size:12.5px}
 .vd{display:block;font-weight:500;color:var(--muted);font-size:12.5px;margin-top:2px}
 .tsum{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sheet-box .vlist{gap:6px}.sheet-box .vopt{padding:10px 12px}

@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.5.0";
+const APP_VERSION = "3.6.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -765,7 +765,7 @@ function itemCard(plan,it,cur,photos){
   return `<div class="item ${it.done?"done":""} ${isCur?"cur":""}" id="it-${it.g}">
     <div class="ihead">
       <img class="ith" src="${cover(h)}" alt="" loading="lazy">
-      <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:""}</div>
+      <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:g.modo==="aprobacion"?` <span class="pill acc tiny">Requiere aprobación</span>`:""}</div>
         <div class="gmeta"><span>${esc(h.chip||h.nombre)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
       <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-g="${it.g}">${IC.check}</button>
     </div>
@@ -858,7 +858,8 @@ function perfilView(){
   <section class="section"><div class="sechead"><h3>Ajustes</h3></div>
     <div class="card setlist">
       <button class="setrow" data-act="tab" data-t="perfil" data-sub="grupos"><span class="si">${IC.users}</span><span class="sl">Grupos de Facebook<small>${groups.filter(g=>!g.paused).length} activos · links, pausar, agregar</small></span>${IC.chev}</button>
-      <button class="setrow" data-act="tab" data-t="perfil" data-sub="tipos"><span class="si">${IC.target}</span><span class="sl">Tipo de publicación por grupo<small>${groups.filter(g=>g.modo==="venta").length} piden “Vender artículo” · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>
+      <button class="setrow" data-act="gadd"><span class="si">${IC.plus}</span><span class="sl">Agregar un grupo nuevo<small>Nombre, link y cómo te deja publicar</small></span>${IC.chev}</button>
+      <button class="setrow" data-act="tab" data-t="perfil" data-sub="tipos"><span class="si">${IC.target}</span><span class="sl">Tipo de publicación por grupo<small>${groups.filter(g=>g.modo==="venta").length} piden “Vender artículo” · ${groups.filter(g=>g.modo&&MODOS[g.modo].pausa).length} pausados · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>
       <button class="setrow" data-act="tab" data-t="perfil" data-sub="verificar"><span class="si">${IC.check}</span><span class="sl">Verificar grupos<small>Revisa link por link a qué grupo pertenece</small></span>${IC.chev}</button>
       ${tog("sound",game.sound,game.sound?IC.sound:IC.mute,"Sonidos")}
       ${tog("vibra",game.vibra,IC.vibra,"Vibración")}
@@ -918,7 +919,7 @@ function gruposView(){
       <div class="grow ${g.paused?"paused":""}">
         <span class="n">${i+1}</span>
         <button class="nm" data-act="gedit" data-g="${g.id}">${esc(g.name)}
-          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span>${g.modo==="venta"?`<span class="pill acc">Vender artículo</span>`:g.modo==="post"?`<span class="pill">Publicación normal</span>`:""}${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
+          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span>${modoPill(g)}${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
         </button>
         <span class="r">
           <a class="rbtn sm ${hasUrl?"acc":""}" href="${esc(groupHref(g))}" target="_blank" rel="noopener" aria-label="Abrir grupo">${IC.ext}</a>
@@ -932,13 +933,15 @@ function gruposView(){
 function groupSheet(id){
   const g=id?group(id):{id:"",name:"",url:"",type:"general",paused:false};
   const s=openSheet(`
-    <h3>${id?"Editar grupo":"Nuevo grupo"}</h3>
+    <h3>${id?"Editar grupo":"Agregar grupo"}</h3>${id?"":`<p class="small" style="margin:0">Únete primero al grupo en Facebook. Luego pon aquí su nombre y su link.</p>`}
     <div class="field"><label for="gf-n">Nombre</label><input class="inp" id="gf-n" value="${esc(g.name)}" autocomplete="off"></div>
     <div class="field"><label for="gf-u">Link del grupo</label><input class="inp" id="gf-u" type="url" inputmode="url" placeholder="https://www.facebook.com/groups/..." value="${esc(g.url)}" autocomplete="off"><div class="small" style="margin:0">En Facebook: abre el grupo → Compartir → Copiar enlace, y pégalo aquí.</div></div>
-    <div class="field"><span>Tipo</span><div class="pills wrap" id="gf-t">${Object.entries(GROUP_TYPES).map(([k,l])=>`<button class="ptab ${g.type===k?"on":""}" type="button" data-type="${k}">${esc(l)}</button>`).join("")}</div></div>
+    <div class="field"><span>¿Cómo te deja publicar?</span><div class="vlist" id="gf-m">${[...Object.entries(MODOS),["",{n:"No sé todavía",d:"Lo reviso después"}]].map(([k,m])=>`<button class="vopt ${(g.modo||"")===k?"on":""}" type="button" data-modo="${k}"><span class="vr">${(g.modo||"")===k?IC.check:""}</span><span class="vn">${esc(m.n)}<small class="vd">${esc(m.d)}</small></span></button>`).join("")}</div></div>
+    <div class="field"><span>Zona del grupo</span><div class="pills wrap" id="gf-t">${Object.entries(GROUP_TYPES).map(([k,l])=>`<button class="ptab ${g.type===k?"on":""}" type="button" data-type="${k}">${esc(l)}</button>`).join("")}</div></div>
     <button class="btn primary big" data-gs="save">Guardar</button>
     ${id?`<div class="row2"><button class="btn ghost" data-gs="pause">${g.paused?"Reactivar":"Pausar"}</button><button class="btn ghost danger" data-gs="del">Borrar</button></div>`:`<button class="btn ghost" data-gs="cancel">Cancelar</button>`}`);
-  let type=g.type;
+  let type=g.type,modo=g.modo||"";
+  s.querySelectorAll("[data-modo]").forEach(b=>b.onclick=()=>{modo=b.dataset.modo;s.querySelectorAll("[data-modo]").forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.querySelector(".vr").innerHTML=on?IC.check:""})});
   s.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{type=b.dataset.type;s.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("on",x===b))});
   s.querySelectorAll("[data-gs]").forEach(b=>b.onclick=()=>{
     const a=b.dataset.gs;
@@ -948,12 +951,14 @@ function groupSheet(id){
       if(!name){toast("Ponle nombre al grupo");return}
       if(url&&!safeUrl(url)){toast("El link debe empezar con https://");return}
       const typeChanged=id&&g.type!==type;
-      if(id){Object.assign(g,{name,url,type})}
-      else{const n=groups.reduce((m,x)=>Math.max(m,+x.id.slice(1)||0),0)+1;groups.push({id:"g"+n,name,url,type,paused:false})}
-      saveGroups();if(!id||typeChanged)rebuildToday();closeSheet();render();toast(id?"Grupo guardado ✓":"Grupo agregado ✓");
+      let tgt;
+      if(id){tgt=g;Object.assign(g,{name,url,type})}
+      else{const n=groups.reduce((m,x)=>Math.max(m,+x.id.slice(1)||0),0)+1;tgt={id:"g"+n,name,url,type,paused:false};groups.push(tgt)}
+      const pauseChanged=setModo(tgt,modo);
+      saveGroups();if(!id||typeChanged||pauseChanged)rebuildToday();closeSheet();render();toast(id?"Grupo guardado ✓":"Grupo agregado ✓");
     }
-    if(a==="pause"){g.paused=!g.paused;saveGroups();rebuildToday();closeSheet();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez")}
-    if(a==="del"){if(!confirm(`¿Borrar "${g.name}"?`))return;groups=groups.filter(x=>x.id!==g.id);saveGroups();rebuildToday();closeSheet();render();toast("Grupo borrado")}
+    if(a==="pause"){g.paused=!g.paused;delete g.autoPause;saveGroups();rebuildToday();closeSheet();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez")}
+    if(a==="del"){if(!confirm(`¿Borrar "${g.name}"? Sale de la lista y de la rotación. Lo que ya publicaste ahí sigue contando.`))return;groups=groups.filter(x=>x.id!==g.id);saveGroups();rebuildToday();closeSheet();render();toast("Grupo borrado")}
   });
 }
 
@@ -1059,9 +1064,22 @@ document.addEventListener("input",e=>{
    venta = te obliga a "Vender artículo" (se crea un artículo en tu Marketplace)
    ====================================================================== */
 const MODOS = {
-  post:  {n:"Publicación normal", d:"Me deja escribir texto y subir fotos"},
-  venta: {n:"Pide “Vender artículo”", d:"Se crea un artículo nuevo en mi Marketplace"}
+  post:       {n:"Publicación normal",              d:"Me deja escribir texto y subir fotos", corto:"Publicación normal"},
+  venta:      {n:"Pide “Vender artículo”",          d:"Se crea un artículo nuevo en mi Marketplace", corto:"Vender artículo"},
+  aprobacion: {n:"Normal, pero la aprueba un admin",d:"Mi publicación se queda pendiente hasta que la aprueben", corto:"Requiere aprobación"},
+  solicitud:  {n:"Todavía no me aceptan",           d:"Pedí unirme y el admin no me ha aceptado · se pausa", corto:"Esperando que me acepten", pausa:true},
+  lectura:    {n:"Solo lectura / pausado",          d:"Nadie puede publicar por ahora · se pausa", corto:"Solo lectura", pausa:true}
 };
+/* cambia cómo te deja publicar un grupo; los de "solicitud" y "solo lectura" se pausan solos
+   y se reactivan solos cuando les pones otro tipo */
+function setModo(g,v){
+  const wasPaused=!!g.paused;
+  if(v)g.modo=v;else delete g.modo;
+  if(v&&MODOS[v].pausa){g.paused=true;g.autoPause=true}
+  else if(g.autoPause){g.paused=false;delete g.autoPause}
+  return wasPaused!==!!g.paused;
+}
+const modoPill = g => !g.modo?"":`<span class="pill ${g.modo==="venta"||g.modo==="aprobacion"?"acc":""}">${esc(MODOS[g.modo].corto)}</span>`;
 const SELLING_URL = "https://www.facebook.com/marketplace/you/selling";
 const mktLink = h => safeUrl(hs(h.id).mktUrl) || SELLING_URL;
 function tiposView(){
@@ -1075,8 +1093,8 @@ function tiposView(){
     const cnt=k=>groups.filter(g=>g.modo===k).length,sin=groups.filter(g=>!g.modo).length;
     return head+`
     <section class="card"><div class="sechead"><h3>Resumen</h3><span class="muted sm">${N-sin}/${N} revisados</span></div>
-      <div class="tsum"><div class="stat"><b>${cnt("post")}</b><small>publicación normal</small></div><div class="stat"><b>${cnt("venta")}</b><small>piden “Vender artículo”</small></div></div>
-      <div class="vsum" style="margin-top:10px">${groups.map((g,k)=>`<div class="vrow ${g.modo?"":"miss"}"><span class="vk">${k+1}</span><div class="vt"><b>${esc(g.name)}</b><small>${g.modo?esc(MODOS[g.modo].n):"Sin revisar"}</small></div><button class="linkbtn sm" data-act="tgo" data-i="${k}">cambiar</button></div>`).join("")}</div>
+      <div class="tsum">${Object.entries(MODOS).map(([k,m])=>`<div class="stat"><b>${cnt(k)}</b><small>${esc(m.corto)}</small></div>`).join("")}</div>
+      <div class="vsum" style="margin-top:10px">${groups.map((g,k)=>`<div class="vrow ${g.modo?"":"miss"}"><span class="vk">${k+1}</span><div class="vt"><b>${esc(g.name)}</b><small>${g.modo?esc(MODOS[g.modo].corto):"Sin revisar"}</small></div><button class="linkbtn sm" data-act="tgo" data-i="${k}">cambiar</button></div>`).join("")}</div>
     </section>
     <div class="sticky vnav"><div class="row2"><button class="btn ghost" data-act="tprev">Anterior</button><button class="btn primary" data-act="tab" data-t="publicar">Listo</button></div></div>`;
   }
@@ -1097,7 +1115,7 @@ function tiposView(){
 }
 function tiposAct(act,b){
   const N=groups.length,i=Math.min(view.ti||0,N);
-  if(act==="tpick"){const g=groups[i];if(!g)return;const v=b.dataset.v;if(v)g.modo=v;else delete g.modo;saveGroups();haptic();
+  if(act==="tpick"){const g=groups[i];if(!g)return;const ch=setModo(g,b.dataset.v);saveGroups();if(ch)rebuildToday();haptic();
     view.ti=Math.min(N,i+1);render();window.scrollTo(0,0);return}
   if(act==="tnext"){view.ti=Math.min(N,i+1);render();window.scrollTo(0,0);return}
   if(act==="tprev"){view.ti=Math.max(0,i-1);render();window.scrollTo(0,0);return}
