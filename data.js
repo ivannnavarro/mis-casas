@@ -201,7 +201,8 @@ const XP = {
   visitaAgendada:100,
   visitaHecha:150,
   apartado:1000,
-  venta:1000
+  venta:1000,
+  ventaProducto:200    // vender un producto (pants, etc.)
 };
 /* Bonus de XP al cumplir cada meta semanal */
 const BONUS_SEMANA = {grupos:200, pub:100, conv:150, vis:250};

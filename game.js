@@ -119,7 +119,13 @@ let G = {level:1, dc:{}};
 const weekKey = t => {const d=new Date(t);const wd=(d.getDay()+6)%7;return ymd(new Date(d.getFullYear(),d.getMonth(),d.getDate()-wd))};
 function calc(){
   const ev=[];
-  Object.values(plans).forEach(p=>p.items.forEach(i=>{if(i.done)ev.push({t:i.done,k:"grupo",h:i.h})}));
+  Object.values(plans).forEach(p=>p.items.forEach(i=>{if(i.done)ev.push({t:i.done,k:"grupo",h:i.p?"p:"+i.p:i.h})}));
+  (state.products||[]).forEach(p=>{const h="p:"+p.id;
+    (p.pub||[]).forEach(t=>ev.push({t,k:"marketplace",h}));
+    (p.int||[]).forEach(t=>ev.push({t,k:"interesado",h}));
+    (p.seg||[]).forEach(t=>ev.push({t,k:"seguimiento",h}));
+    if(p.status==="vend"&&p.vendT)ev.push({t:p.vendT,k:"ventaProducto",h});
+  });
   HOUSES.forEach(h=>{const s=hs(h.id);
     s.pub.forEach(t=>ev.push({t,k:"marketplace",h:h.id}));
     s.int.forEach(t=>ev.push({t,k:"interesado",h:h.id}));
@@ -132,7 +138,7 @@ function calc(){
     if(s.vend)ev.push({t:s.vend,k:"venta",h:u.house,u:u.id});
   });
   const x2=new Set(game.x2),dc={},dmg={},last={},weeks={};
-  const tot={grupo:0,marketplace:0,interesado:0,seguimiento:0,visitaAgendada:0,visitaHecha:0,apartado:0,venta:0};
+  const tot={grupo:0,marketplace:0,interesado:0,seguimiento:0,visitaAgendada:0,visitaHecha:0,apartado:0,venta:0,ventaProducto:0};
   let xp=0;
   for(const e of ev){
     const d=ymd(e.t);

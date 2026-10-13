@@ -1,5 +1,5 @@
 /* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.6.1";
+const APP_VERSION = "3.7.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -159,14 +159,17 @@ function weights(g){
   return w;
 }
 function blockOf(i,n){return Math.min(cfg.blocks.length-1,Math.floor(i*cfg.blocks.length/n))}
-function buildPlan(key, forced){
+function buildPlan(key, forced, forcedP){
+  forcedP=forcedP||{};
   const dn=dayNum(key);
   const act=groups.filter(g=>!g.paused);
   const n=act.length;if(!n) return [];
-  const items=act.map((g,i)=>({g:g.id,b:blockOf(i,n),h:null}));
+  const blk={};act.forEach((g,i)=>blk[g.id]=blockOf(i,n));
+  const items=act.filter(aceptaCasas).map(g=>({g:g.id,b:blk[g.id],h:null}));
   const dayCnt={},blkCnt={};
   const idx=items.map((_,i)=>i);
-  const rotIdx=idx.slice(dn%n).concat(idx.slice(0,dn%n));
+  const m=items.length||1;
+  const rotIdx=idx.slice(dn%m).concat(idx.slice(0,dn%m));
   const order=rotIdx.filter(i=>forced[items[i].g]).concat(rotIdx.filter(i=>!forced[items[i].g]));
   for(const i of order){
     const it=items[i],g=group(it.g),w=weights(g),c=(rot.cur[g.id] ||= {});
@@ -188,6 +191,7 @@ function buildPlan(key, forced){
     rot.last[g.id]=h;it.h=h;
     dayCnt[h]=(dayCnt[h]||0)+1;blkCnt[it.b+h]=(blkCnt[it.b+h]||0)+1;
   }
+  const prodItems=buildProdItems(dn,act,blk,forcedP);
   const out=[];
   for(let b=0;b<cfg.blocks.length;b++){
     const L=items.filter(x=>x.b===b&&x.h);
@@ -198,8 +202,24 @@ function buildPlan(key, forced){
       }
     }
     out.push(...L);
+    out.push(...prodItems.filter(x=>x.b===b));
   }
   return out;
+}
+/* productos: cada grupo que acepta productos recibe 1 al día, turnándose y sin repetir el de ayer */
+function buildProdItems(dn,act,blk,forcedP){
+  const P=activeProds();rot.plast ||= {};
+  if(!P.length)return [];
+  return act.filter(aceptaProds).map((g,i)=>{
+    let pid=forcedP[g.id];
+    if(!pid||!prod(pid)){
+      let k=(dn+i)%P.length;
+      if(P.length>1&&P[k].id===rot.plast[g.id])k=(k+1)%P.length;
+      pid=P[k].id;
+    }
+    rot.plast[g.id]=pid;
+    return {g:g.id,b:blk[g.id],p:pid};
+  });
 }
 function ensureToday(){
   const t=todayKey();
@@ -207,23 +227,25 @@ function ensureToday(){
     if(!plans[t].missions){plans[t].missions=makeMissions(t);savePlans()}
     return plans[t];
   }
-  rot.snap={date:t,cur:clone(rot.cur),last:clone(rot.last)};
+  rot.snap={date:t,cur:clone(rot.cur),last:clone(rot.last),plast:clone(rot.plast||{})};
   plans[t]={items:buildPlan(t,{}),photos:{},missions:makeMissions(t)};
   // los días viejos se compactan (sólo lo publicado), nunca se borran: de ahí sale tu XP
   Object.keys(plans).forEach(k=>{if(dayNum(t)-dayNum(k)>45&&!plans[k].compact){
-    plans[k]={...plans[k],items:plans[k].items.filter(i=>i.done).map(({g,h,b,done})=>({g,h,b,done})),photos:{},compact:true}}});
+    plans[k]={...plans[k],items:plans[k].items.filter(i=>i.done).map(({g,h,p,b,done})=>p?{g,p,b,done}:{g,h,b,done}),photos:{},compact:true}}});
   savePlans();
   return plans[t];
 }
 function rebuildToday(){
   const t=todayKey();
   if(!plans[t]) return ensureToday();
-  if(rot.snap&&rot.snap.date===t){rot.cur=clone(rot.snap.cur);rot.last=clone(rot.snap.last)}
-  const old=plans[t].items,forced={};
-  old.forEach(it=>{const g=group(it.g);if(g&&!g.paused&&(it.done||hs(it.h).status!=="vend"))forced[it.g]=it.h});
-  const fresh=buildPlan(t,forced);
-  fresh.forEach(it=>{const o=old.find(x=>x.g===it.g&&x.h===it.h);if(o){it.done=o.done;it.copied=o.copied;it.opened=o.opened}});
-  old.filter(o=>o.done&&!fresh.some(x=>x.g===o.g)).forEach(o=>fresh.push({...o,b:Math.min(o.b,cfg.blocks.length-1),gone:true}));
+  if(rot.snap&&rot.snap.date===t){rot.cur=clone(rot.snap.cur);rot.last=clone(rot.snap.last);rot.plast=clone(rot.snap.plast||{})}
+  const old=plans[t].items,forced={},forcedP={};
+  old.forEach(it=>{const g=group(it.g);if(!g||g.paused)return;
+    if(it.p){const p=prod(it.p);if(p&&aceptaProds(g)&&(it.done||p.status!=="vend"))forcedP[it.g]=it.p}
+    else if(aceptaCasas(g)&&(it.done||hs(it.h).status!=="vend"))forced[it.g]=it.h});
+  const fresh=buildPlan(t,forced,forcedP);
+  fresh.forEach(it=>{const o=old.find(x=>x.g===it.g&&(it.p?x.p===it.p:x.h===it.h));if(o){it.done=o.done;it.copied=o.copied;it.opened=o.opened}});
+  old.filter(o=>o.done&&!fresh.some(x=>ik(x)===ik(o))).forEach(o=>fresh.push({...o,b:Math.min(o.b,cfg.blocks.length-1),gone:true}));
   plans[t].items=fresh;
   savePlans();
 }
@@ -233,8 +255,8 @@ function itemTime(plan,it){
   return blockStart(it.b)+Math.max(0,k)*cfg.gap;
 }
 function groupText(it){
-  const h=house(it.h);
-  return h.texto;
+  if(it.p){const p=prod(it.p);return p?prodTexto(p):""}
+  return house(it.h).texto;
 }
 function duePending(){
   const p=plans[todayKey()];if(!p)return 0;const nm=nowMin();
@@ -487,15 +509,15 @@ function render(){
   ensureToday();calc();applyLook();
   const t=view.tab;let html;
   if(t==="inicio") html=inicioView();
-  else if(t==="casas") html=view.id?houseView(house(view.id)):casasView();
+  else if(t==="casas") html=view.pid?prodView(prod(view.pid)):view.id?houseView(house(view.id)):view.cat==="prod"?prodsView():casasView();
   else if(t==="publicar") html=publicarView();
   else if(t==="logros") html=logrosView();
   else if(t==="perfil") html=view.sub==="grupos"?gruposView():view.sub==="verificar"?verificarView():view.sub==="tipos"?tiposView():perfilView();
   else if(t==="fin") html=finView();
-  const detail=(t==="casas"&&view.id)||t==="fin"||(t==="perfil"&&(view.sub==="verificar"||view.sub==="tipos"));
+  const detail=(t==="casas"&&(view.id||view.pid))||t==="fin"||(t==="perfil"&&(view.sub==="verificar"||view.sub==="tipos"));
   $("#app").innerHTML=(detail?"":t==="inicio"?`<div class="safe-top"></div>`:topXP())+html;
   document.body.classList.toggle("nonav",!!detail);
-  renderNav();
+  renderNav();hydratePhotos();
 }
 function renderNav(){
   const due=duePending();
@@ -536,7 +558,8 @@ function inicioView(){
   const left=ms.filter(m=>!missionDone(m,t)).length;
   const due=duePending();
   const wk=thisWeek();
-  const ganado=G.sold*COMISION,activos=G.active.filter(u=>us(u.id).status!=="vend").length,enJuego=activos*COMISION;
+  const pv=prods().filter(p=>p.status==="vend"),pa=prods().filter(p=>p.status!=="vend"),gan=p=>+p.ganancia||0;
+  const ganado=G.sold*COMISION+pv.reduce((a,p)=>a+gan(p),0),activos=G.active.filter(u=>us(u.id).status!=="vend").length+pa.length,enJuego=G.active.filter(u=>us(u.id).status!=="vend").length*COMISION+pa.reduce((a,p)=>a+gan(p),0);
   // cofre + misiones de hoy (una sola tarjeta oscura)
   const mrow=m=>{const [a,b]=missionProgress(m,t),ok=a>=b;return `<div class="mrow ${ok?"ok":""}"><span class="mchk">${ok?IC.check:""}</span><span class="mt">${esc(MISSION_TXT[m.type](m))}</span><span class="mp">${Math.min(a,b)}/${b}</span></div>`};
   let chestHead;
@@ -593,7 +616,7 @@ function inicioView(){
     <div class="card money">
       <div class="mtop"><div><small>Por ganar</small><b>${money(enJuego)}</b></div><div class="mr"><small>Ya ganado</small><b>${money(ganado)}</b></div></div>
       <div class="bar"><i style="width:${pct(ganado,ganado+enJuego)}%"></i></div>
-      <div class="mleg"><span>${G.sold} vendida${G.sold===1?"":"s"}</span><span>${activos} por vender</span></div>
+      <div class="mleg"><span>${G.sold+pv.length} vendida${G.sold+pv.length===1?"":"s"}</span><span>${activos} por vender</span></div>
     </div>
   </section>
   <p class="quote">${esc(FRASES[dayNum(t)%FRASES.length])}</p>`;
@@ -623,6 +646,7 @@ function casasView(){
   return `
   <header class="hdr"><div><h1>Mundos</h1><p class="loc">Temporada ${game.season} · ${conq}/${G.active.length} conquistados</p></div>
     <div class="hdr-r">${streakChip()}</div></header>
+  ${catTabs()}<div style="height:12px"></div>
   <div class="chips">${[["all","Todas"],...HOUSES.filter(h=>G.active.some(u=>u.house===h.id)).map(h=>[h.id,h.chip||h.nombre])].map(([k,l])=>`<button class="chip ${f===k?"on":""}" data-act="filter" data-f="${k}">${esc(l)}</button>`).join("")}</div>
   ${list.length?`<div class="grid">${list.map(u=>{const h=house(u.house),s=us(u.id),hp=bossHP(u),hh=hs(h.id);
     return `<button class="world ${s.status!=="disp"?"won":""}" data-act="open" data-id="${h.id}">
@@ -762,26 +786,30 @@ function publicarView(){
   ${total&&done<total?`<p class="small center">Por cada grupo: copia el texto → guarda las fotos → abre el grupo, pega y sube las fotos → palomea.</p>`:""}`;
 }
 function itemCard(plan,it,cur,photos){
-  const g=group(it.g)||{name:"(grupo borrado)",url:""},h=house(it.h);
+  const g=group(it.g)||{name:"(grupo borrado)",url:""};
+  const P=it.p?pst(prod(it.p)||{id:it.p,nombre:"(producto borrado)",precio:"",fotos:[]}):null,h=P?null:house(it.h);
+  const key=ik(it),label=P?P.nombre:(h.chip||h.nombre),pk=P?"p:"+P.id:it.h;
+  const mkt=P?safeUrl(P.mktUrl):safeUrl(hs(h.id).mktUrl),mktHref=mkt||SELLING_URL;
   const isCur=cur&&cur===it;
   const hasUrl=!!safeUrl(g.url);
-  return `<div class="item ${it.done?"done":""} ${isCur?"cur":""}" id="it-${it.g}">
+  const thumb=P?pimg(P.fotos[0],"ith"):`<img class="ith" src="${cover(h)}" alt="" loading="lazy">`;
+  return `<div class="item ${it.done?"done":""} ${isCur?"cur":""} ${P?"isprod":""}" id="it-${key}">
     <div class="ihead">
-      <img class="ith" src="${cover(h)}" alt="" loading="lazy">
+      ${thumb}
       <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:g.modo==="aprobacion"?` <span class="pill acc tiny">Requiere autorización</span>`:""}</div>
-        <div class="gmeta"><span>${esc(h.chip||h.nombre)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
-      <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-g="${it.g}">${IC.check}</button>
+        <div class="gmeta">${P?`<span class="pill tiny">Producto</span>`:""}<span>${esc(label)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
+      <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-k="${key}">${IC.check}</button>
     </div>
     ${g.modo==="venta"?`
-    <div class="ventabox"><b>Este grupo pide “Vender artículo”.</b> No subas la casa otra vez: comparte tu publicación de Marketplace que ya tienes de ${esc(h.chip||h.nombre)} en este grupo.${safeUrl(hs(h.id).mktUrl)?"":` <button class="glink" data-act="mktlink" data-id="${h.id}">guardar el link de tu publicación</button>`}</div>
+    <div class="ventabox"><b>Este grupo pide “Vender artículo”.</b> No lo subas otra vez: comparte tu publicación de Marketplace que ya tienes de ${esc(label)} en este grupo.${mkt?"":` <button class="glink" data-act="${P?"p-mktfor":"mktlink"}" data-id="${P?P.id:h.id}">guardar el link de tu publicación</button>`}</div>
     <div class="acts two">
-      <a class="act pri" data-act="mktopen" data-g="${it.g}" href="${esc(mktLink(h))}" target="_blank" rel="noopener">${IC.mega}${safeUrl(hs(h.id).mktUrl)?"Mi publicación":"Mis publicaciones"}</a>
-      <a class="act ${it.opened?"did":""}" data-act="gopen" data-g="${it.g}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
+      <a class="act pri" data-act="mktopen" data-k="${key}" href="${esc(mktHref)}" target="_blank" rel="noopener">${IC.mega}${mkt?"Mi publicación":"Mis publicaciones"}</a>
+      <a class="act ${it.opened?"did":""}" data-act="gopen" data-k="${key}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
     </div>`:`
     <div class="acts">
-      <button class="act ${it.copied?"did":"pri"}" data-act="gcopy" data-g="${it.g}">${IC.copy}${it.copied?"Copiado":"Copiar texto"}</button>
-      <button class="act ${photos[it.h]?"did":""}" data-act="gfotos" data-g="${it.g}">${IC.img}${photos[it.h]?"Fotos ✓":"Fotos"}</button>
-      <a class="act ${it.opened?"did":""}" data-act="gopen" data-g="${it.g}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
+      <button class="act ${it.copied?"did":"pri"}" data-act="gcopy" data-k="${key}">${IC.copy}${it.copied?"Copiado":"Copiar texto"}</button>
+      <button class="act ${photos[pk]?"did":""}" data-act="gfotos" data-k="${key}">${IC.img}${photos[pk]?"Fotos ✓":"Fotos"}</button>
+      <a class="act ${it.opened?"did":""}" data-act="gopen" data-k="${key}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
     </div>`}
   </div>`;
 }
@@ -918,11 +946,11 @@ function gruposView(){
   <button class="btn dark full" data-act="tab" data-t="perfil" data-sub="verificar" style="margin:4px 0 14px">${IC.check} Verificar grupos (link por link)</button>
   <div class="chips">${Object.entries(GROUP_TYPES).map(([k,l])=>`<span class="chip static">${esc(l)} · ${cnt(k)}</span>`).join("")}</div>
   <div class="glist">
-    ${groups.map((g,i)=>{const it=plan&&plan.items.find(x=>x.g===g.id&&!x.gone);const hasUrl=!!safeUrl(g.url);return `
+    ${groups.map((g,i)=>{const it=plan&&plan.items.find(x=>x.g===g.id&&!x.gone&&x.h),itp=plan&&plan.items.find(x=>x.g===g.id&&!x.gone&&x.p);const hasUrl=!!safeUrl(g.url);return `
       <div class="grow ${g.paused?"paused":""}">
         <span class="n">${i+1}</span>
         <button class="nm" data-act="gedit" data-g="${g.id}">${esc(g.name)}
-          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span>${modoPill(g)}${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
+          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span><span class="pill">${esc(ACEPTA[acepta(g)])}</span>${modoPill(g)}${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${!g.paused&&itp&&prod(itp.p)?`<span class="pill ${itp.done?"acc":""}">+ ${esc(prod(itp.p).nombre)}${itp.done?" ✓":""}</span>`:""}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
         </button>
         <span class="r">
           <a class="rbtn sm ${hasUrl?"acc":""}" href="${esc(groupHref(g))}" target="_blank" rel="noopener" aria-label="Abrir grupo">${IC.ext}</a>
@@ -940,10 +968,12 @@ function groupSheet(id){
     <div class="field"><label for="gf-n">Nombre</label><input class="inp" id="gf-n" value="${esc(g.name)}" autocomplete="off"></div>
     <div class="field"><label for="gf-u">Link del grupo</label><input class="inp" id="gf-u" type="url" inputmode="url" placeholder="https://www.facebook.com/groups/..." value="${esc(g.url)}" autocomplete="off"><div class="small" style="margin:0">En Facebook: abre el grupo → Compartir → Copiar enlace, y pégalo aquí.</div></div>
     <div class="field"><span>¿Cómo te deja publicar?</span><div class="vlist" id="gf-m">${[...Object.entries(MODOS),["",{n:"No sé todavía",d:"Lo reviso después"}]].map(([k,m])=>`<button class="vopt ${(g.modo||"")===k?"on":""}" type="button" data-modo="${k}"><span class="vr">${(g.modo||"")===k?IC.check:""}</span><span class="vn">${esc(m.n)}<small class="vd">${esc(m.d)}</small></span></button>`).join("")}</div></div>
+    <div class="field"><span>¿Qué publicas aquí?</span><div class="pills wrap" id="gf-a">${Object.entries(ACEPTA).map(([k,l])=>`<button class="ptab ${acepta(g)===k?"on":""}" type="button" data-acepta="${k}">${esc(l)}</button>`).join("")}</div></div>
     <div class="field"><span>Zona del grupo</span><div class="pills wrap" id="gf-t">${Object.entries(GROUP_TYPES).map(([k,l])=>`<button class="ptab ${g.type===k?"on":""}" type="button" data-type="${k}">${esc(l)}</button>`).join("")}</div></div>
     <button class="btn primary big" data-gs="save">Guardar</button>
     ${id?`<div class="row2"><button class="btn ghost" data-gs="pause">${g.paused?"Reactivar":"Pausar"}</button><button class="btn ghost danger" data-gs="del">Borrar</button></div>`:`<button class="btn ghost" data-gs="cancel">Cancelar</button>`}`);
-  let type=g.type,modo=g.modo||"";
+  let type=g.type,modo=g.modo||"",ac=acepta(g);
+  s.querySelectorAll("[data-acepta]").forEach(b=>b.onclick=()=>{ac=b.dataset.acepta;s.querySelectorAll("[data-acepta]").forEach(x=>x.classList.toggle("on",x===b))});
   s.querySelectorAll("[data-modo]").forEach(b=>b.onclick=()=>{modo=b.dataset.modo;s.querySelectorAll("[data-modo]").forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.querySelector(".vr").innerHTML=on?IC.check:""})});
   s.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{type=b.dataset.type;s.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("on",x===b))});
   s.querySelectorAll("[data-gs]").forEach(b=>b.onclick=()=>{
@@ -955,9 +985,11 @@ function groupSheet(id){
       if(url&&!safeUrl(url)){toast("El link debe empezar con https://");return}
       const typeChanged=id&&g.type!==type;
       let tgt;
+      const acChanged=id&&acepta(g)!==ac;
       if(id){tgt=g;Object.assign(g,{name,url,type})}
       else{const n=groups.reduce((m,x)=>Math.max(m,+x.id.slice(1)||0),0)+1;tgt={id:"g"+n,name,url,type,paused:false};groups.push(tgt)}
-      const pauseChanged=setModo(tgt,modo);
+      tgt.acepta=ac;
+      const pauseChanged=setModo(tgt,modo)||acChanged;
       saveGroups();if(!id||typeChanged||pauseChanged)rebuildToday();closeSheet();render();toast(id?"Grupo guardado ✓":"Grupo agregado ✓");
     }
     if(a==="pause"){g.paused=!g.paused;delete g.autoPause;saveGroups();rebuildToday();closeSheet();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez")}
@@ -1203,14 +1235,16 @@ function afterTick(plan,it,wasBlockDone){
     return;
   }
   const nxt=plan.items.find(i=>!i.done&&!i.gone&&i.b===it.b);
-  if(nxt) setTimeout(()=>{const el=document.getElementById("it-"+nxt.g);el&&el.scrollIntoView({behavior:"smooth",block:"center"})},150);
+  if(nxt) setTimeout(()=>{const el=document.getElementById("it-"+ik(nxt));el&&el.scrollIntoView({behavior:"smooth",block:"center"})},150);
 }
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;
   const act=b.dataset.act;const h=view.id&&house(view.id);
   const plan=plans[todayKey()];
-  const it=b.dataset.g&&plan?plan.items.find(x=>x.g===b.dataset.g&&!x.gone):null;
+  const it=b.dataset.k&&plan?plan.items.find(x=>ik(x)===b.dataset.k&&!x.gone):b.dataset.g&&plan?plan.items.find(x=>x.g===b.dataset.g&&!x.gone):null;
+  if(act==="padd"||act==="openp"||act.startsWith("p-")){prodAct(act,b);return}
   switch(act){
+    case "cat": go({tab:"casas",cat:b.dataset.v});break;
     case "tab": {const v={tab:b.dataset.t,sub:b.dataset.sub};if(v.sub==="tipos"){const k=groups.findIndex(g=>!g.modo);v.ti=k<0?groups.length:k}go(v);break;}
     case "filter": view.f=b.dataset.f;render();break;
     case "ptab": view.ptab=b.dataset.v;render();break;
@@ -1224,7 +1258,8 @@ document.addEventListener("click",e=>{
       if(!it.done){sfx("tick");toast(`−${XP.grupo} XP`)}
       afterTick(plan,it,wasBlockDone);break;}
     case "gcopy": if(it){copy(groupText(it),b,"Texto copiado. Ahora las fotos 👉",()=>{it.copied=true;savePlans();render()})}break;
-    case "gfotos": if(it){saveAll(house(it.h),b,()=>{plan.photos=plan.photos||{};plan.photos[it.h]=true;savePlans();render()})}break;
+    case "gfotos": if(it){const pk=it.p?"p:"+it.p:it.h,done=()=>{plan.photos=plan.photos||{};plan.photos[pk]=true;savePlans();render()};
+      if(it.p)saveProdFotos(prod(it.p),b,done);else saveAll(house(it.h),b,done)}break;
     case "gopen": if(it){it.opened=true;savePlans();setTimeout(render,400)}break;
     /* casas */
     case "open": go({tab:"casas",id:b.dataset.id,f:view.f});break;
@@ -1306,4 +1341,5 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>rende
 migrate();
 render();
 checkProgress();
-setTimeout(()=>{const p=plans[todayKey()];if(p)[...new Set(p.items.map(i=>i.h))].forEach(id=>prepFiles(house(id)))},900);
+setTimeout(()=>{const p=plans[todayKey()];if(p){[...new Set(p.items.filter(i=>i.h).map(i=>i.h))].forEach(id=>prepFiles(house(id)));
+  [...new Set(p.items.filter(i=>i.p).map(i=>i.p))].forEach(id=>{const x=prod(id);if(x)prepProdFiles(pst(x))})}},900);
