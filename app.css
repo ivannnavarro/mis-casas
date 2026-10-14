@@ -527,3 +527,6 @@ body.nonav .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .item.isprod .ith{border-radius:14px}
 .gmeta .pill.tiny{padding:1px 7px}
 textarea.inp{font-family:inherit;resize:vertical}
+
+/* anuncio fijo (productos) */
+.adtag{position:absolute;left:8px;bottom:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:11px;font-weight:700;border-radius:99px;padding:4px 8px;box-shadow:0 2px 8px rgba(0,0,0,.18)}

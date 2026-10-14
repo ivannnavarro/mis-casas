@@ -1,7 +1,7 @@
 {
-  "name": "Mis Casas",
-  "short_name": "Mis Casas",
-  "description": "Publica tus casas en grupos de Facebook y contesta mensajes rápido.",
+  "name": "Mis Ventas",
+  "short_name": "Mis Ventas",
+  "description": "Publica tus casas y productos en grupos de Facebook y contesta mensajes rápido.",
   "lang": "es-MX",
   "start_url": "./",
   "scope": "./",

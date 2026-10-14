@@ -1,5 +1,5 @@
-/* Mis Casas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.7.0";
+/* Mis Ventas · app (datos en data.js, juego en game.js) */
+const APP_VERSION = "3.8.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -206,20 +206,26 @@ function buildPlan(key, forced, forcedP){
   }
   return out;
 }
-/* productos: cada grupo que acepta productos recibe 1 al día, turnándose y sin repetir el de ayer */
+/* productos:
+   - los que se turnan: cada grupo que acepta productos recibe 1 al día, sin repetir el de ayer
+   - anuncios fijos: salen en TODOS los grupos de productos (diario, o cada 2/3 días repartidos entre grupos) */
 function buildProdItems(dn,act,blk,forcedP){
-  const P=activeProds();rot.plast ||= {};
-  if(!P.length)return [];
-  return act.filter(aceptaProds).map((g,i)=>{
+  const all=activeProds();rot.plast ||= {};
+  const P=all.filter(p=>!esFijo(pst(p))),F=all.filter(p=>esFijo(p)&&p.status==="disp");
+  const PG=act.filter(aceptaProds);
+  const out=[];
+  if(P.length) PG.forEach((g,i)=>{
     let pid=forcedP[g.id];
-    if(!pid||!prod(pid)){
+    if(!pid||!prod(pid)||esFijo(prod(pid))){
       let k=(dn+i)%P.length;
       if(P.length>1&&P[k].id===rot.plast[g.id])k=(k+1)%P.length;
       pid=P[k].id;
     }
     rot.plast[g.id]=pid;
-    return {g:g.id,b:blk[g.id],p:pid};
+    out.push({g:g.id,b:blk[g.id],p:pid});
   });
+  F.forEach(p=>PG.forEach((g,i)=>{if((dn+i)%(+p.cada||1)===0)out.push({g:g.id,b:blk[g.id],p:p.id})}));
+  return out;
 }
 function ensureToday(){
   const t=todayKey();
@@ -241,7 +247,7 @@ function rebuildToday(){
   if(rot.snap&&rot.snap.date===t){rot.cur=clone(rot.snap.cur);rot.last=clone(rot.snap.last);rot.plast=clone(rot.snap.plast||{})}
   const old=plans[t].items,forced={},forcedP={};
   old.forEach(it=>{const g=group(it.g);if(!g||g.paused)return;
-    if(it.p){const p=prod(it.p);if(p&&aceptaProds(g)&&(it.done||p.status!=="vend"))forcedP[it.g]=it.p}
+    if(it.p){const p=prod(it.p);if(p&&!esFijo(pst(p))&&aceptaProds(g)&&(it.done||p.status!=="vend")&&(!forcedP[it.g]||it.done))forcedP[it.g]=it.p}
     else if(aceptaCasas(g)&&(it.done||hs(it.h).status!=="vend"))forced[it.g]=it.h});
   const fresh=buildPlan(t,forced,forcedP);
   fresh.forEach(it=>{const o=old.find(x=>x.g===it.g&&(it.p?x.p===it.p:x.h===it.h));if(o){it.done=o.done;it.copied=o.copied;it.opened=o.opened}});
@@ -255,7 +261,7 @@ function itemTime(plan,it){
   return blockStart(it.b)+Math.max(0,k)*cfg.gap;
 }
 function groupText(it){
-  if(it.p){const p=prod(it.p);return p?prodTexto(p):""}
+  if(it.p){const p=prod(it.p);return p?prodTexto(p,esFijo(pst(p))?dayNum(todayKey()):null):""}
   return house(it.h).texto;
 }
 function duePending(){
@@ -522,7 +528,7 @@ function render(){
 function renderNav(){
   const due=duePending();
   const it=(k,ic,l)=>`<button class="nv ${view.tab===k?"on":""}" data-act="tab" data-t="${k}" ${view.tab===k?'aria-current="page"':""}>${ic}<span>${l}</span></button>`;
-  $("#nav").innerHTML=`<div class="nav-in">${it("inicio",IC.home,"Inicio")}${it("casas",IC.map,"Casas")}
+  $("#nav").innerHTML=`<div class="nav-in">${it("inicio",IC.home,"Inicio")}${it("casas",IC.map,"Ventas")}
     <button class="nv-center ${view.tab==="publicar"?"on":""}" data-act="tab" data-t="publicar" aria-label="Publicar ahora"><span class="nv-c">${IC.send}</span>${due?`<span class="dot">${due}</span>`:""}</button>
     ${it("logros",IC.trophy,"Logros")}${it("perfil",IC.user,"Perfil")}</div>`;
 }
@@ -797,7 +803,7 @@ function itemCard(plan,it,cur,photos){
     <div class="ihead">
       ${thumb}
       <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:g.modo==="aprobacion"?` <span class="pill acc tiny">Requiere autorización</span>`:""}</div>
-        <div class="gmeta">${P?`<span class="pill tiny">Producto</span>`:""}<span>${esc(label)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
+        <div class="gmeta">${P?`<span class="pill tiny">${esFijo(P)?"📢 Anuncio":"Producto"}</span>`:""}<span>${esc(label)}</span><span>·</span><span class="tm">${fmtMin(itemTime(plan,it))}</span>${group(it.g)?`<button class="glink" data-act="gedit" data-g="${it.g}">${hasUrl?"cambiar link":"poner link"}</button>`:""}</div></div>
       <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-k="${key}">${IC.check}</button>
     </div>
     ${g.modo==="venta"?`
@@ -931,7 +937,7 @@ function perfilView(){
       <input type="file" id="restore" accept=".json,application/json" hidden>
       <button class="linkbtn" data-act="regen">Rehacer el plan de hoy</button>
     </div></section>
-  <p class="small center">Mis Casas v${APP_VERSION}</p>`;
+  <p class="small center">Mis Ventas v${APP_VERSION}</p>`;
 }
 const icsChanged = () => cfg.blocks.join()!==DEFAULT_CFG.blocks.join();
 
@@ -946,11 +952,11 @@ function gruposView(){
   <button class="btn dark full" data-act="tab" data-t="perfil" data-sub="verificar" style="margin:4px 0 14px">${IC.check} Verificar grupos (link por link)</button>
   <div class="chips">${Object.entries(GROUP_TYPES).map(([k,l])=>`<span class="chip static">${esc(l)} · ${cnt(k)}</span>`).join("")}</div>
   <div class="glist">
-    ${groups.map((g,i)=>{const it=plan&&plan.items.find(x=>x.g===g.id&&!x.gone&&x.h),itp=plan&&plan.items.find(x=>x.g===g.id&&!x.gone&&x.p);const hasUrl=!!safeUrl(g.url);return `
+    ${groups.map((g,i)=>{const it=plan&&plan.items.find(x=>x.g===g.id&&!x.gone&&x.h),itps=plan?plan.items.filter(x=>x.g===g.id&&!x.gone&&x.p&&prod(x.p)):[];const hasUrl=!!safeUrl(g.url);return `
       <div class="grow ${g.paused?"paused":""}">
         <span class="n">${i+1}</span>
         <button class="nm" data-act="gedit" data-g="${g.id}">${esc(g.name)}
-          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span><span class="pill">${esc(ACEPTA[acepta(g)])}</span>${modoPill(g)}${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${!g.paused&&itp&&prod(itp.p)?`<span class="pill ${itp.done?"acc":""}">+ ${esc(prod(itp.p).nombre)}${itp.done?" ✓":""}</span>`:""}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
+          <span class="gtags"><span class="pill">${esc(GROUP_TYPES[g.type]||g.type)}</span><span class="pill">${esc(ACEPTA[acepta(g)])}</span>${modoPill(g)}${g.paused?`<span class="pill">Pausado</span>`:it?`<span class="pill ${it.done?"acc":""}">Hoy: ${esc(house(it.h).chip||house(it.h).nombre)}${it.done?" ✓":""}</span>`:""}${g.paused?"":itps.map(itp=>`<span class="pill ${itp.done?"acc":""}">+ ${esc(prod(itp.p).nombre)}${itp.done?" ✓":""}</span>`).join("")}${hasUrl?"":`<span class="pill warn">sin link</span>`}</span>
         </button>
         <span class="r">
           <a class="rbtn sm ${hasUrl?"acc":""}" href="${esc(groupHref(g))}" target="_blank" rel="noopener" aria-label="Abrir grupo">${IC.ext}</a>
@@ -1206,10 +1212,10 @@ function buildICS(){
     "BEGIN:VEVENT",`UID:mis-casas-bloque-${i+1}-${t.replace(":","")}@mis-casas`,`DTSTAMP:${start}T000000Z`,
     `DTSTART;TZID=America/Mexico_City:${start}T${h}${m}00`,`DTEND;TZID=America/Mexico_City:${start}T${pad(Math.floor(end/60)%24)}${pad(end%60)}00`,
     "RRULE:FREQ=DAILY",`SUMMARY:🏡 Publicar casas – bloque ${fmtMin(toMin(t))}`,
-    `DESCRIPTION:Abre Mis Casas → Publicar ahora.\\n${url}`,`URL:${url}`,
+    `DESCRIPTION:Abre Mis Ventas → Publicar ahora.\\n${url}`,`URL:${url}`,
     "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Toca publicar en los grupos","TRIGGER:-PT5M","END:VALARM",
     "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Ya toca publicar","TRIGGER:PT0M","END:VALARM","END:VEVENT"].join("\r\n")}).join("\r\n");
-  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mis Casas//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mis Ventas//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH",
     "BEGIN:VTIMEZONE","TZID:America/Mexico_City","BEGIN:STANDARD","DTSTART:19700101T000000","TZOFFSETFROM:-0600","TZOFFSETTO:-0600","TZNAME:CST","END:STANDARD","END:VTIMEZONE",
     ev,"END:VCALENDAR"].join("\r\n");
 }

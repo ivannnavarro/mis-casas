@@ -6,9 +6,20 @@
 
 const prods = () => (state.products ||= []);
 const prod = id => prods().find(p=>p.id===id);
-const pst = p => {p.pub||=[];p.int||=[];p.seg||=[];p.status||="disp";p.fotos||=[];return p};
+const pst = p => {p.pub||=[];p.int||=[];p.seg||=[];p.status||="disp";p.fotos||=[];p.modo||="rota";p.cada||=1;p.titulos||=[];return p};
 const activeProds = () => prods().filter(p=>pst(p).status!=="vend").sort((a,b)=>(a.creado||"")<(b.creado||"")?-1:1);
 const precioNumDe = s => String(s||"").replace(/[^\d]/g,"");
+
+/* cómo entra cada producto a los grupos:
+   rota = se turna con tus otros productos (1 producto por grupo al día)
+   fijo = anuncio fijo: se publica en TODOS tus grupos de productos, sin turnarse */
+const PMODOS = {rota:"Turnarse", fijo:"Anuncio fijo"};
+const esFijo = p => p.modo==="fijo";
+const CADA = {1:"Diario",2:"Cada 2 días",3:"Cada 3 días"};
+const prodGroups = () => groups.filter(g=>!g.paused&&aceptaProds(g));
+/* títulos alternos: en anuncios fijos cambia el título cada día para que no se vea repetido */
+const prodTitulos = p => [p.nombre,...(p.titulos||[])].map(t=>String(t||"").trim()).filter(Boolean);
+const prodTitulo = (p,dn) => {const t=prodTitulos(p);return t.length?t[(dn||0)%t.length]:""};
 
 /* qué se publica en cada grupo. Sin elegir: bienes raíces = solo casas; los demás = casas y productos */
 const ACEPTA = {ambos:"Casas y productos", casas:"Solo casas", productos:"Solo productos"};
@@ -17,7 +28,7 @@ const aceptaCasas = g => acepta(g)!=="productos";
 const aceptaProds = g => acepta(g)!=="casas";
 
 /* clave única de cada pendiente (un grupo puede tener casa + producto el mismo día) */
-const ik = it => it.g+(it.p?"~p":"");
+const ik = it => it.g+(it.p?"~"+it.p:"");
 
 /* ---------- fotos en el celular (IndexedDB) ---------- */
 const IDB = {
@@ -83,8 +94,8 @@ function prodLB(p,after){
 }
 
 /* ---------- textos ---------- */
-function prodTexto(p){
-  return `${p.nombre}\n💰 ${p.precio}${p.descripcion?`\n\n${p.descripcion}`:""}${p.zona?`\n\n📍 ${p.zona}`:""}`;
+function prodTexto(p,dn){
+  return `${dn==null?p.nombre:prodTitulo(p,dn)}\n💰 ${p.precio}${p.descripcion?`\n\n${p.descripcion}`:""}${p.zona?`\n\n📍 ${p.zona}`:""}`;
 }
 function prodReplies(p){
   return [
@@ -116,13 +127,13 @@ function prodsView(){
   <button class="btn dark full" data-act="padd" style="margin:12px 0 14px">${IC.plus} Agregar producto</button>
   ${L.length?`<div class="grid">${L.map(p=>{const hp=prodHP(p);return `
     <button class="world ${p.status!=="disp"?"won":""}" data-act="openp" data-id="${p.id}">
-      <div class="wimg">${pimg(p.fotos[0])}<span class="boss">👾</span>${p.status!=="disp"?`<span class="crown">${p.status==="vend"?"👑 Vendido":"🔑 Apartado"}</span>`:""}</div>
+      <div class="wimg">${pimg(p.fotos[0])}<span class="boss">👾</span>${esFijo(p)&&p.status==="disp"?`<span class="adtag">📢 Anuncio fijo</span>`:""}${p.status!=="disp"?`<span class="crown">${p.status==="vend"?"👑 Vendido":"🔑 Apartado"}</span>`:""}</div>
       <b class="wn">${esc(p.nombre)}</b>
       <span class="wp">${esc(p.precio)}</span>
       <small class="wd">${p.status==="vend"?`Ganaste ${money(+p.ganancia||0)}`:p.int.length?`${p.int.length} interesado${p.int.length>1?"s":""}`:`Ganancia ${money(+p.ganancia||0)}`}</small>
       <div class="hp"><div class="bar"><i style="width:${hp}%"></i></div><small>${p.status!=="disp"?"Jefe derrotado":`Jefe ${hp}%`}</small></div>
     </button>`}).join("")}</div>`
-  :`<div class="empty"><div class="e">📦</div><h3>Todavía no tienes productos</h3><p>Agrega lo que quieras vender (ropa, cosas de la casa, lo que sea). Entra a la rotación de tus grupos de ventas generales.</p></div>`}`;
+  :`<div class="empty"><div class="e">📦</div><h3>Todavía no tienes productos</h3><p>Agrega lo que quieras vender (ropa, cosas de la casa, lo que sea). Puedes ponerlo a turnarse con tus otros productos o como anuncio fijo en todos tus grupos.</p></div>`}`;
 }
 function prodView(p){
   if(!p){view.pid=null;return prodsView()}
@@ -147,10 +158,12 @@ function prodView(p){
       <button class="row" data-act="p-fotos"><div><b>Fotos</b><span class="t">${p.fotos.length?(p.fotos.length===1?"Guardar la foto":`Guardar las ${p.fotos.length} fotos`):"Sin fotos · agrégalas en Editar"}</span></div><span class="copy">Guardar</span></button>
       ${fields.map(([k,key,v])=>`<button class="row ${key==="descripcion"?"main":""}" data-act="p-field" data-k="${key}"><div><b>${k}</b><span class="t">${esc(v||"—")}</span></div><span class="copy">Copiar</span></button>`).join("")}
       <button class="row" data-act="p-mkt"><div><b>Link de mi publicación en Marketplace</b><span class="t">${safeUrl(p.mktUrl)?esc(p.mktUrl):"Sin guardar · para compartirla en grupos de venta sin duplicarla"}</span></div><span class="copy">${safeUrl(p.mktUrl)?"Cambiar":"Guardar"}</span></button>
-      <button class="row" data-act="p-group"><div><b>Para un grupo de Facebook</b><span class="t">Nombre, precio y descripción</span></div><span class="copy">Copiar</span></button>
+      <button class="row" data-act="p-group"><div><b>Para un grupo de Facebook</b><span class="t">${esFijo(p)&&p.titulos.length?"Con el título de hoy · ":""}Nombre, precio y descripción</span></div><span class="copy">Copiar</span></button>
     </div>
     <div class="small">${lp?"Última vez en Marketplace: "+(days(lp)===0?"hoy":"hace "+days(lp)+" días")+` · ${p.pub.length} en total`:"Todavía no lo has publicado en Marketplace"}${p.pub.length?` · <button class="linkbtn sm" data-act="p-undo" data-k="marketplace">deshacer última</button>`:""}</div>
   </section>
+
+  ${prodGruposCard(p)}
 
   <section class="card">
     <div class="sechead"><h3>Responder mensajes</h3></div>
@@ -170,16 +183,46 @@ function prodView(p){
   <section class="card">
     <h3 class="h3">Estado</h3>
     <div class="pills">${Object.entries(PSTATUS).map(([k,l])=>`<button class="ptab ${p.status===k?"on":""}" data-act="p-status" data-s="${k}">${l}</button>`).join("")}</div>
-    <p class="small">Vendido = sale solo de la rotación y suma tu ganancia (+${XP.ventaProducto} XP).</p>
+    <p class="small">Apartado = deja de salir como anuncio fijo. Vendido = sale solo de tus grupos y suma tu ganancia (+${XP.ventaProducto} XP).</p>
     <div class="row2"><button class="btn ghost" data-act="p-edit">Editar</button><button class="btn ghost danger" data-act="p-del">Borrar</button></div>
   </section>
 
   <div class="sticky"><button class="btn primary big" data-act="p-pub">${IC.check} Ya lo publiqué en Marketplace <small>+${XP.marketplace} XP</small></button></div>`;
 }
 
+/* ---------- cómo sale en grupos ---------- */
+function prodGruposCard(p){
+  const G2=prodGroups(),n=G2.length,porDia=esFijo(p)?Math.ceil(n/p.cada):0;
+  const tits=prodTitulos(p);
+  return `<section class="card">
+    <div class="sechead"><h3>En mis grupos</h3>${esFijo(p)?`<span class="pill acc tiny">📢 Anuncio fijo</span>`:""}</div>
+    <div class="pills">${Object.entries(PMODOS).map(([k,l])=>`<button class="ptab ${p.modo===k?"on":""}" data-act="p-modo" data-v="${k}">${l}</button>`).join("")}</div>
+    ${esFijo(p)?`
+    <p class="sub" style="margin-top:10px">Sale en <b>todos</b> tus grupos de productos sin turnarse con nada. ${p.status==="disp"?`Hoy: <b>${porDia} grupo${porDia===1?"":"s"}</b>.`:`<b>Está ${p.status==="apar"?"apartado":"vendido"}, por ahora no sale.</b>`}</p>
+    <div class="pills">${Object.entries(CADA).map(([k,l])=>`<button class="ptab ${+p.cada===+k?"on":""}" data-act="p-cada" data-v="${k}">${l}</button>`).join("")}</div>
+    <div class="rows" style="margin-top:10px">
+      <button class="row" data-act="p-tits"><div><b>Títulos que se van turnando</b><span class="t">${tits.length>1?`${tits.length} títulos · hoy: ${esc(prodTitulo(p,dayNum(todayKey())))}`:"Solo uno · agrega más para que no se vea repetido"}</span></div><span class="copy">Editar</span></button>
+      <button class="row" data-act="tab" data-t="perfil" data-sub="grupos"><div><b>${n} grupo${n===1?"":"s"} aceptan productos</b><span class="t">Para sumar o quitar grupos cambia “Qué publico aquí” en cada grupo</span></div><span class="copy">Ver</span></button>
+    </div>`
+    :`<p class="small">Se turna con tus otros productos: cada grupo de productos recibe uno distinto cada día. ${n} grupo${n===1?"":"s"} aceptan productos.</p>`}
+  </section>`;
+}
+function titsSheet(p){
+  const s=openSheet(`<h3>Títulos del anuncio</h3>
+    <p class="small" style="margin:0">Uno por renglón. Cada día se usa el siguiente, así tu anuncio no se ve igual todos los días en el mismo grupo. El primero es el título principal.</p>
+    <textarea class="inp" id="tt-x" rows="6" placeholder="Pants Premium Nuevos\nPants deportivos nuevos, varias tallas\n2 pants por $599">${esc(prodTitulos(p).join("\n"))}</textarea>
+    <button class="btn primary big" data-t="save">Guardar</button><button class="btn ghost" data-t="x">Cancelar</button>`);
+  s.querySelector('[data-t="x"]').onclick=closeSheet;
+  s.querySelector('[data-t="save"]').onclick=()=>{
+    const L=s.querySelector("#tt-x").value.split("\n").map(x=>x.trim()).filter(Boolean);
+    if(!L.length){toast("Deja al menos un título");return}
+    p.nombre=L[0];p.titulos=L.slice(1);delete fileCache["p:"+p.id];save();closeSheet();render();toast("Títulos guardados ✓")};
+}
+
 /* ---------- agregar / editar ---------- */
 function prodSheet(id){
-  const isNew=!id,p=id?pst(prod(id)):{id:"p"+Date.now().toString(36),nombre:"",precio:"",descripcion:"",zona:"Cd. Madero",ganancia:"",fotos:[]};
+  const isNew=!id,p=id?pst(prod(id)):{id:"p"+Date.now().toString(36),nombre:"",precio:"",descripcion:"",zona:"Cd. Madero",ganancia:"",fotos:[],modo:"rota",cada:1,titulos:[]};
+  let modo=p.modo||"rota";
   let fotos=p.fotos.slice();const added=[];
   const s=openSheet(`<h3>${isNew?"Agregar producto":"Editar producto"}</h3>
     <div class="field"><label for="pf-n">Nombre</label><input class="inp" id="pf-n" value="${esc(p.nombre)}" placeholder="Ej. Pants deportivos talla M" autocomplete="off"></div>
@@ -189,7 +232,13 @@ function prodSheet(id){
     <div class="field"><label for="pf-z">Zona (general, sin dirección exacta)</label><input class="inp" id="pf-z" value="${esc(p.zona)}" autocomplete="off"></div>
     <div class="field"><span>Fotos</span><div class="pfotos" id="pf-f"></div>
       <label class="btn ghost full" for="pf-in">${IC.img} Agregar fotos</label><input type="file" id="pf-in" accept="image/*" multiple hidden></div>
+    <div class="field"><span>¿Cómo lo publico en mis grupos?</span><div class="pills" id="pf-m" style="margin-top:4px"></div><small class="muted" id="pf-mh"></small></div>
     <button class="btn primary big" data-pf="save">${isNew?"Agregar producto":"Guardar"}</button><button class="btn ghost" data-pf="x">Cancelar</button>`);
+  const mbox=s.querySelector("#pf-m"),mh=s.querySelector("#pf-mh");
+  const drawM=()=>{mbox.innerHTML=Object.entries(PMODOS).map(([k,l])=>`<button type="button" class="ptab ${modo===k?"on":""}" data-m="${k}">${l}</button>`).join("");
+    mh.textContent=modo==="fijo"?"Sale en todos tus grupos de productos, sin turnarse con tus otros productos.":"Se turna con tus otros productos: un producto distinto por grupo cada día.";
+    mbox.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{modo=b.dataset.m;drawM()})};
+  drawM();
   const box=s.querySelector("#pf-f");
   const draw=()=>{box.innerHTML=fotos.length?fotos.map((k,i)=>`<span class="pf">${pimg(k)}<button type="button" data-rm="${i}" aria-label="Quitar foto">${IC.x}</button></span>`).join(""):`<small class="muted">Sin fotos todavía</small>`;
     hydratePhotos(box);box.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{fotos.splice(+b.dataset.rm,1);draw()})};
@@ -209,12 +258,12 @@ function prodSheet(id){
     if(!precio){toast("Ponle precio");return}
     const removed=p.fotos.filter(k=>!fotos.includes(k));
     Object.assign(p,{nombre,precio:/^\d/.test(precio)?"$"+precio:precio,descripcion:s.querySelector("#pf-d").value.trim(),
-      zona:s.querySelector("#pf-z").value.trim(),ganancia:precioNumDe(s.querySelector("#pf-g").value),fotos});
+      zona:s.querySelector("#pf-z").value.trim(),ganancia:precioNumDe(s.querySelector("#pf-g").value),fotos,modo});
     removed.forEach(k=>IDB.del(k).catch(()=>{}));cleanup();
     delete fileCache["p:"+p.id];
     if(isNew){p.creado=new Date().toISOString();prods().push(pst(p))}
     save();rebuildToday();closeSheet();
-    if(isNew){go({tab:"casas",cat:"prod",pid:p.id});toast("Producto agregado ✓ · ya entra a la rotación")}else{render();toast("Producto guardado ✓")}
+    if(isNew){go({tab:"casas",cat:"prod",pid:p.id});toast(modo==="fijo"?"Producto agregado ✓ · sale como anuncio en tus grupos":"Producto agregado ✓ · ya entra a la rotación")}else{render();toast("Producto guardado ✓")}
   };
 }
 
@@ -234,7 +283,11 @@ function prodAct(act,b){
     case "p-lb": prodLB(p);break;
     case "p-fotos": saveProdFotos(p,b);break;
     case "p-field": copy(b.dataset.k==="precioNum"?precioNumDe(p.precio):(p[b.dataset.k]||""),b);break;
-    case "p-group": copy(prodTexto(p),b,"Copiado para grupo ✓");break;
+    case "p-group": copy(prodTexto(p,dayNum(todayKey())),b,"Copiado para grupo ✓");break;
+    case "p-modo": {const v=b.dataset.v;if(v===p.modo)break;p.modo=v;save();rebuildToday();render();
+      toast(v==="fijo"?`📢 Anuncio fijo · sale en tus ${prodGroups().length} grupos de productos`:"Ahora se turna con tus otros productos");break;}
+    case "p-cada": {p.cada=+b.dataset.v||1;save();rebuildToday();render();toast(CADA[p.cada]+" ✓");break;}
+    case "p-tits": titsSheet(p);break;
     case "p-mkt": mktSheetFor(p);break;
     case "p-reply": {const r=prodReplies(p).find(x=>x.id===b.dataset.rid);
       copy(r.x,b,"Copiado, pégalo en Messenger ✓",()=>{game.replies.push(new Date().toISOString());game.replies=game.replies.slice(-500);saveGame();calc();
@@ -249,7 +302,7 @@ function prodAct(act,b){
       if(st==="vend")modal({art:`<div class="bossfall">👾</div><div class="bosswin">👑</div>`,title:"¡Vendido!",text:`${p.nombre}. +${num(G.xp-before)} XP y ${money(+p.ganancia||0)} de ganancia.`,confetti:"big",sound:"boss"});
       else toast("Estado actualizado");
       checkProgress();break;}
-    case "p-del": if(confirm(`¿Borrar "${p.nombre}"? Sale de la app y de la rotación.`)){
+    case "p-del": if(confirm(`¿Borrar "${p.nombre}"? Sale de la app y de tus grupos.`)){
       p.fotos.forEach(k=>IDB.del(k).catch(()=>{}));state.products=prods().filter(x=>x.id!==p.id);save();rebuildToday();go({tab:"casas",cat:"prod"});toast("Producto borrado")}break;
   }
 }
