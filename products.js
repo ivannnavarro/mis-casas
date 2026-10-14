@@ -7,7 +7,7 @@
 const prods = () => (state.products ||= []);
 const prod = id => prods().find(p=>p.id===id);
 const pst = p => {p.pub||=[];p.int||=[];p.seg||=[];p.status||="disp";p.fotos||=[];p.modo||="rota";p.cada||=1;p.titulos||=[];return p};
-const activeProds = () => prods().filter(p=>pst(p).status!=="vend").sort((a,b)=>(a.creado||"")<(b.creado||"")?-1:1);
+const activeProds = () => prods().filter(p=>pst(p).status==="disp").sort((a,b)=>(a.creado||"")<(b.creado||"")?-1:1);
 const precioNumDe = s => String(s||"").replace(/[^\d]/g,"");
 
 /* cómo entra cada producto a los grupos:
@@ -53,7 +53,8 @@ const pimg = (k,cls,alt) => k?`<img ${cls?`class="${cls}"`:""} src="${purl[k]||B
 function hydratePhotos(root){
   (root||document).querySelectorAll("img[data-pfoto]").forEach(img=>{
     const k=img.dataset.pfoto;if(purl[k]){img.src=purl[k];return}
-    loadPhoto(k).then(u=>{if(u)img.src=u});
+    loadPhoto(k).then(u=>{if(u){img.src=u;return}
+      const ph=document.createElement("span");ph.className="nophoto "+(img.className||"");ph.textContent="📦";img.replaceWith(ph)});
   });
 }
 function shrinkPhoto(file){
@@ -183,7 +184,7 @@ function prodView(p){
   <section class="card">
     <h3 class="h3">Estado</h3>
     <div class="pills">${Object.entries(PSTATUS).map(([k,l])=>`<button class="ptab ${p.status===k?"on":""}" data-act="p-status" data-s="${k}">${l}</button>`).join("")}</div>
-    <p class="small">Apartado = deja de salir como anuncio fijo. Vendido = sale solo de tus grupos y suma tu ganancia (+${XP.ventaProducto} XP).</p>
+    <p class="small">Apartado = deja de publicarse en tus grupos (también si es anuncio fijo). Vendido = sale de tus grupos y suma tu ganancia (+${XP.ventaProducto} XP).</p>
     <div class="row2"><button class="btn ghost" data-act="p-edit">Editar</button><button class="btn ghost danger" data-act="p-del">Borrar</button></div>
   </section>
 
@@ -282,7 +283,7 @@ function prodAct(act,b){
     case "p-edit": prodSheet(p.id);break;
     case "p-lb": prodLB(p);break;
     case "p-fotos": saveProdFotos(p,b);break;
-    case "p-field": copy(b.dataset.k==="precioNum"?precioNumDe(p.precio):(p[b.dataset.k]||""),b);break;
+    case "p-field": {const v=b.dataset.k==="precioNum"?precioNumDe(p.precio):(p[b.dataset.k]||"");if(!v){toast("Ese campo está vacío · llénalo en Editar");break}copy(v,b);break;}
     case "p-group": copy(prodTexto(p,dayNum(todayKey())),b,"Copiado para grupo ✓");break;
     case "p-modo": {const v=b.dataset.v;if(v===p.modo)break;p.modo=v;save();rebuildToday();render();
       toast(v==="fijo"?`📢 Anuncio fijo · sale en tus ${prodGroups().length} grupos de productos`:"Ahora se turna con tus otros productos");break;}

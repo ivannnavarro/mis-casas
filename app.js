@@ -1,5 +1,5 @@
 /* Mis Ventas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.8.0";
+const APP_VERSION = "3.8.1";
 
 /* ---------- storage ---------- */
 const store = {
@@ -214,9 +214,10 @@ function buildProdItems(dn,act,blk,forcedP){
   const P=all.filter(p=>!esFijo(pst(p))),F=all.filter(p=>esFijo(p)&&p.status==="disp");
   const PG=act.filter(aceptaProds);
   const out=[];
-  if(P.length) PG.forEach((g,i)=>{
+  PG.forEach((g,i)=>{
     let pid=forcedP[g.id];
-    if(!pid||!prod(pid)||esFijo(prod(pid))){
+    if(!pid){
+      if(!P.length)return;
       let k=(dn+i)%P.length;
       if(P.length>1&&P[k].id===rot.plast[g.id])k=(k+1)%P.length;
       pid=P[k].id;
@@ -247,7 +248,7 @@ function rebuildToday(){
   if(rot.snap&&rot.snap.date===t){rot.cur=clone(rot.snap.cur);rot.last=clone(rot.snap.last);rot.plast=clone(rot.snap.plast||{})}
   const old=plans[t].items,forced={},forcedP={};
   old.forEach(it=>{const g=group(it.g);if(!g||g.paused)return;
-    if(it.p){const p=prod(it.p);if(p&&!esFijo(pst(p))&&aceptaProds(g)&&(it.done||p.status!=="vend")&&(!forcedP[it.g]||it.done))forcedP[it.g]=it.p}
+    if(it.p){const p=prod(it.p);if(aceptaProds(g)&&(!p||!esFijo(pst(p)))&&(it.done||(p&&p.status==="disp"))&&(!forcedP[it.g]||it.done))forcedP[it.g]=it.p}
     else if(aceptaCasas(g)&&(it.done||hs(it.h).status!=="vend"))forced[it.g]=it.h});
   const fresh=buildPlan(t,forced,forcedP);
   fresh.forEach(it=>{const o=old.find(x=>x.g===it.g&&(it.p?x.p===it.p:x.h===it.h));if(o){it.done=o.done;it.copied=o.copied;it.opened=o.opened}});
