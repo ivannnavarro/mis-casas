@@ -530,3 +530,7 @@ textarea.inp{font-family:inherit;resize:vertical}
 
 /* anuncio fijo (productos) */
 .adtag{position:absolute;left:8px;bottom:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:11px;font-weight:700;border-radius:99px;padding:4px 8px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+/* espera en el mismo grupo */
+.item.wait{opacity:.7}
+.waitbox{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:14px;padding:8px 10px;margin-bottom:10px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.waitbox .ic{width:16px;height:16px;color:var(--accent);flex:none}

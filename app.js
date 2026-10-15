@@ -1,5 +1,5 @@
 /* Mis Ventas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.8.1";
+const APP_VERSION = "3.9.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -7,7 +7,7 @@ const store = {
   set(k,v){try{localStorage.setItem("casas:"+k,JSON.stringify(v))}catch(e){}}
 };
 const clone = o => JSON.parse(JSON.stringify(o));
-const DEFAULT_CFG = {blocks:["14:00","20:00"], gap:2, goals:{grupos:100,pub:7,conv:15,vis:3}, theme:"auto"};
+const DEFAULT_CFG = {blocks:["14:00","20:00"], gap:2, espera:30, goals:{grupos:100,pub:7,conv:15,vis:3}, theme:"auto"};
 
 let state  = store.get("state",{});
 let custom = store.get("custom2",{});
@@ -68,6 +68,10 @@ function migrate(){
   if(fixed)store.set("custom2",custom);
   let fixedModo=false;
   groups.forEach(g=>{if(g.modo==="solicitud"){setModo(g,"aprobacion");fixedModo=true}});
+  if(!store.get("ventaPausa",false)){
+    groups.forEach(g=>{if(g.modo==="venta"&&!g.paused){setModo(g,"venta");fixedModo=true}});
+    store.set("ventaPausa",true);
+  }
   if(fixedModo){saveGroups();if(plans[todayKey()])rebuildToday()}
 }
 
@@ -258,8 +262,20 @@ function rebuildToday(){
 }
 const blockStart = b => toMin(cfg.blocks[b]||"14:00");
 function itemTime(plan,it){
-  const L=plan.items.filter(x=>x.b===it.b&&!x.gone);const k=L.indexOf(it);
-  return blockStart(it.b)+Math.max(0,k)*cfg.gap;
+  const L=plan.items.filter(x=>x.b===it.b&&!x.gone),last={};let t=blockStart(it.b)-cfg.gap;
+  for(const x of L){
+    t=Math.max(t+cfg.gap,last[x.g]!=null?last[x.g]+(cfg.espera??30):0);
+    last[x.g]=t;
+    if(x===it)return t;
+  }
+  return blockStart(it.b);
+}
+/* minutos que faltan para poder publicar otra vez en el mismo grupo (según lo que ya palomeaste) */
+function cooldownLeft(plan,it){
+  const w=cfg.espera??30;if(!w||it.done)return 0;
+  const lastDone=plan.items.filter(x=>x.g===it.g&&x!==it&&x.done).map(x=>+new Date(x.done)).sort((a,b)=>b-a)[0];
+  if(!lastDone)return 0;
+  return Math.max(0,Math.ceil((lastDone+w*6e4-Date.now())/6e4));
 }
 function groupText(it){
   if(it.p){const p=prod(it.p);return p?prodTexto(p,esFijo(pst(p))?dayNum(todayKey()):null):""}
@@ -271,8 +287,8 @@ function duePending(){
 }
 function currentItem(plan){
   const nm=nowMin();
-  const pend=plan.items.filter(i=>!i.done&&!i.gone);
-  return pend.find(i=>blockStart(i.b)<=nm)||pend[0]||null;
+  const pend=plan.items.filter(i=>!i.done&&!i.gone),ok=pend.filter(i=>!cooldownLeft(plan,i));
+  return ok.find(i=>blockStart(i.b)<=nm)||pend.find(i=>blockStart(i.b)<=nm)||ok[0]||pend[0]||null;
 }
 function weekDays(){
   const d=new Date(),wd=(d.getDay()+6)%7;
@@ -781,7 +797,7 @@ function publicarView(){
   }
   return `
   <header class="hdr"><div><h1>Publicar ahora</h1><p class="loc">${cap(new Date().toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"}))}</p></div><div class="hdr-r">${streakChip()}</div></header>
-  ${groups.some(g=>!g.paused&&!g.modo)?`<button class="tipobanner" data-act="tab" data-t="perfil" data-sub="tipos">${IC.target}<span><b>¿Algún grupo te pide “Vender artículo”?</b><small>Revisa tus grupos para no duplicar tus casas en Marketplace · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>`:""}
+  ${groups.some(g=>!g.paused&&!g.modo)?`<button class="tipobanner" data-act="tab" data-t="perfil" data-sub="tipos">${IC.target}<span><b>¿Algún grupo te pide “Vender artículo”?</b><small>Márcalo y se pausa solo, así no duplicas en Marketplace · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>`:""}
   ${missionsOk?`<div class="okbanner">${IC.check} Ya cumpliste tus misiones de hoy. Lo demás es extra; si quieres, vete a estudiar 📚</div>`:""}
   <section class="card dayhead">
     <div class="nums"><b>${done}<span> / ${total}</span></b><em>grupos hoy<br>+${XP.grupo} XP cada uno</em></div>
@@ -800,7 +816,9 @@ function itemCard(plan,it,cur,photos){
   const isCur=cur&&cur===it;
   const hasUrl=!!safeUrl(g.url);
   const thumb=P?pimg(P.fotos[0],"ith"):`<img class="ith" src="${cover(h)}" alt="" loading="lazy">`;
-  return `<div class="item ${it.done?"done":""} ${isCur?"cur":""} ${P?"isprod":""}" id="it-${key}">
+  const wait=cooldownLeft(plan,it);
+  return `<div class="item ${it.done?"done":""} ${isCur?"cur":""} ${P?"isprod":""} ${wait?"wait":""}" id="it-${key}">
+    ${wait?`<div class="waitbox">${IC.clock} Espera ${wait} min · acabas de publicar en este grupo. Sigue con otro y regresa.</div>`:""}
     <div class="ihead">
       ${thumb}
       <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:g.modo==="aprobacion"?` <span class="pill acc tiny">Requiere autorización</span>`:""}</div>
@@ -909,6 +927,7 @@ function perfilView(){
       <div class="blocks">${cfg.blocks.map((t,i)=>`<div class="brow"><b>Bloque ${i+1}</b><input class="inp" type="time" value="${t}" data-act="btime" data-i="${i}" aria-label="Hora del bloque ${i+1}">${cfg.blocks.length>1?`<button class="rbtn sm" data-act="bdel" data-i="${i}" aria-label="Quitar bloque">${IC.x}</button>`:"<span></span>"}</div>`).join("")}</div>
       ${cfg.blocks.length<4?`<button class="linkbtn" data-act="badd">＋ Agregar bloque</button>`:""}
       <div class="field"><span>Minutos entre grupo y grupo</span>${step("gap",cfg.gap," min")}</div>
+      <div class="field"><span>Espera en el mismo grupo (ej. casa y luego producto)</span>${step("espera",cfg.espera??30," min")}</div>
       <p class="small">Los grupos activos se reparten parejo entre los bloques.</p>
     </div></section>
 
@@ -1107,7 +1126,7 @@ document.addEventListener("input",e=>{
    ====================================================================== */
 const MODOS = {
   post:       {n:"Publicación normal",              d:"Me deja escribir texto y subir fotos", corto:"Publicación normal"},
-  venta:      {n:"Pide “Vender artículo”",          d:"Se crea un artículo nuevo en mi Marketplace", corto:"Vender artículo"},
+  venta:      {n:"Pide “Vender artículo”",          d:"Me obliga a crear un artículo nuevo en Marketplace · se pausa", corto:"Vender artículo (pausado)", pausa:true},
   aprobacion: {n:"Necesita autorización del admin", d:"Mi publicación se queda pendiente hasta que el admin la apruebe", corto:"Requiere autorización"},
   lectura:    {n:"Solo lectura / pausado",          d:"Nadie puede publicar por ahora · se pausa", corto:"Solo lectura", pausa:true}
 };
@@ -1241,7 +1260,7 @@ function afterTick(plan,it,wasBlockDone){
     modal({art:"🎉",title:`¡Bloque de las ${fmtMin(blockStart(it.b))} listo!`,text:`${L.length} grupos publicados.${rest?` Te quedan ${rest} para el siguiente bloque.`:" Terminaste todos los grupos de hoy."}`,confetti:true,sound:"medal"});
     return;
   }
-  const nxt=plan.items.find(i=>!i.done&&!i.gone&&i.b===it.b);
+  const nxt=currentItem(plan);
   if(nxt) setTimeout(()=>{const el=document.getElementById("it-"+ik(nxt));el&&el.scrollIntoView({behavior:"smooth",block:"center"})},150);
 }
 document.addEventListener("click",e=>{
@@ -1306,6 +1325,7 @@ document.addEventListener("click",e=>{
     /* perfil */
     case "sound": game.sound=!game.sound;saveGame();render();if(game.sound)sfx("xp");break;
     case "vibra": game.vibra=!game.vibra;saveGame();render();haptic();break;
+    case "espera": cfg.espera=Math.max(0,Math.min(120,(cfg.espera??30)+10* +b.dataset.d));saveCfg();render();break;
     case "gap": cfg.gap=Math.max(0,Math.min(15,cfg.gap+ +b.dataset.d));saveCfg();render();break;
     case "gpub": case "gconv": case "gvis": case "ggrupos": {const k=act.slice(1),st=k==="grupos"?10:1;cfg.goals[k]=Math.max(st,cfg.goals[k]+st* +b.dataset.d);saveCfg();render();break;}
     case "badd": {const last=toMin(cfg.blocks[cfg.blocks.length-1]);cfg.blocks.push(fmt24(Math.min(23*60,last+120)));saveCfg();rebuildToday();render();break;}
