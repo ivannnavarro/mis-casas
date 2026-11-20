@@ -42,7 +42,7 @@ PLANTA ALTA
 ✅ Documentación en regla, libre de gravamen
 📏 Superficie: 115.50 m²
 
-📲 ¿Interesado? Escríbeme y agendamos visita.`},
+📲 ¿Le interesa? Escríbame y agendamos una visita.`},
   {id:"ampliacion", nombre:"Casa en esquina, Amp. Unidad Nacional", corto:"la casa en esquina de la Unidad Nacional",
    chip:"Unidad Nacional", jefe:{n:"El Señor de la Esquina", e:"🏰"},
    titulo:"Casa en esquina en venta, Amp. Unidad Nacional, Cd. Madero",
@@ -67,7 +67,7 @@ Casa independiente en esquina, ideal para ampliar o invertir.
 • Bardeada con protecciones, pasillos amplios
 • Terreno 141.46 m² | Construcción 101 m²
 
-📲 Escríbeme para agendar visita.`},
+📲 Escríbame para agendar una visita.`},
   {id:"miramar", nombre:"Casa cerca de Playa Miramar", corto:"la casa de Miramar",
    chip:"Miramar", jefe:{n:"El Kraken de Miramar", e:"🦑"},
    titulo:"Casa en venta cerca de Playa Miramar · 4 recámaras, residencial con alberca",
@@ -98,10 +98,10 @@ AMENIDADES DEL RESIDENCIAL
 • Cancha de pádel, alberca, casa club, áreas verdes y locales comerciales
 
 FORMA DE PAGO
-• 20% de enganche, resto al recibir tu casa (o plan personalizado)
+• 20% de enganche, resto al recibir su casa (o plan personalizado)
 • Promesa notariada y servicios garantizados
 
-📲 Escríbeme para más información y agendar visita.`},
+📲 Escríbame para más información y agendar una visita.`},
   {id:"madero", nombre:"Preventa cerca de Madero Centro", corto:"las casas de preventa",
    chip:"Preventa",
    /* son 2 casas: cada una es su propio jefe y su propia comisión */
@@ -138,7 +138,7 @@ PLANTA ALTA
 
 📍 Col. Felipe Carrillo Puerto, Cd. Madero.
 
-📲 ¡No dejes que te ganen la tuya! Escríbeme para más info y apartar.`}
+📲 Escríbame para más información y para apartar la suya.`}
 ];
 
 /* Tipos de grupo:
@@ -211,11 +211,11 @@ const BONUS_SEMANA = {grupos:200, pub:100, conv:150, vis:250};
 const FRASES = [
   "Una venta son $25,000. Hoy es otro boleto.",
   "Nadie compra una casa que no vio.",
-  "Publicar es lo único que depende de ti. Lo demás llega.",
+  "Publicar es lo único que depende de usted. Lo demás llega.",
   "Más publicaciones, más mensajes, más visitas.",
-  "Ya está todo armado. Copia, pega, palomea.",
+  "Ya está todo listo. Solo copie, pegue y publique.",
   "Diez minutos ahorita valen más que una hora mañana.",
   "El que publica diario es el que vende.",
-  "No necesitas ganas, nada más el celular.",
-  "Cada mensaje que contestas rápido es un cliente que no se va con otro."
+  "No necesita ganas, solo el celular.",
+  "Cada mensaje que contesta rápido es un cliente que no se va con otro."
 ];

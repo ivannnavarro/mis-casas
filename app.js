@@ -1,5 +1,5 @@
 /* Mis Ventas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "4.0.0";
+const APP_VERSION = "4.1.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -327,7 +327,7 @@ function openSheet(html){
 }
 function closeSheet(){const s=$("#sheet");if(s)s.remove()}
 function copySheet(text,after){
-  const s=openSheet(`<b>Tu celular no dejó copiar solo. Toca “Copiar” aquí abajo.</b><textarea class="copyarea"></textarea><div class="row2"><button class="btn ghost" data-x>Cerrar</button><button class="btn primary" data-c>Copiar</button></div>`);
+  const s=openSheet(`<b>Su celular no dejó copiar solo. Toque “Copiar” aquí abajo.</b><textarea class="copyarea"></textarea><div class="row2"><button class="btn ghost" data-x>Cerrar</button><button class="btn primary" data-c>Copiar</button></div>`);
   const ta=s.querySelector("textarea");ta.value=text;
   const sel=()=>{ta.focus();ta.select();ta.setSelectionRange(0,text.length)};sel();
   s.querySelector("[data-c]").onclick=()=>{sel();let ok=false;try{ok=document.execCommand("copy")}catch(e){}if(ok){toast("Copiado ✓");closeSheet();after&&after()}};
@@ -351,7 +351,7 @@ function prepFiles(h){
 }
 function saveAll(h,btn,after){
   const files=fileCache[h.id];
-  if(files==="loading"){toast("Preparando fotos… toca otra vez en un segundo");return}
+  if(files==="loading"){toast("Preparando fotos… toque otra vez en un segundo");return}
   if(Array.isArray(files)&&navigator.canShare&&navigator.canShare({files})){
     navigator.share({files}).then(()=>{flash(btn);toast("Fotos guardadas ✓");after&&after()})
       .catch(e=>{if(e&&e.name==="AbortError")return;openLB(h,0,after)});
@@ -419,7 +419,7 @@ function showModal(){
 /* ======================================================================
    ACCIONES QUE DAN XP
    ====================================================================== */
-const XP_LABEL={grupo:"Publicaste en un grupo",marketplace:"Marketplace",interesado:"Nuevo interesado",seguimiento:"Seguimiento enviado",visitaAgendada:"Visita agendada",visitaHecha:"Visita hecha",apartado:"Apartado",venta:"Venta"};
+const XP_LABEL={grupo:"Publicó en un grupo",marketplace:"Marketplace",interesado:"Nuevo interesado",seguimiento:"Seguimiento enviado",visitaAgendada:"Visita agendada",visitaHecha:"Visita hecha",apartado:"Apartado",venta:"Venta"};
 const LOG_KEY={interesado:"int",seguimiento:"seg",visitaAgendada:"agen",visitaHecha:"vis",marketplace:"pub"};
 function gain(kind,houseId){
   hs(houseId)[LOG_KEY[kind]].push(new Date().toISOString());save();
@@ -446,7 +446,7 @@ function setUnitStatus(uid,st){
   checkProgress();
 }
 function bossFall(u,st,won){
-  modal({cls:"m-boss",art:`<div class="bossfall">${u.jefe.e}</div><div class="bosswin">${st==="vend"?"👑":"🔑"}</div>`,title:`¡Derrotaste a ${u.jefe.n}!`,
+  modal({cls:"m-boss",art:`<div class="bossfall">${u.jefe.e}</div><div class="bosswin">${st==="vend"?"👑":"🔑"}</div>`,title:`¡Derrotó a ${u.jefe.n}!`,
     text:`${u.nombre} ${st==="vend"?"vendida":"apartada"}. Mundo conquistado. +${num(won)} XP${st==="vend"?` · ${money(COMISION)} de comisión`:""}.`,
     confetti:"big",sound:"boss"});
 }
@@ -459,8 +459,8 @@ function checkProgress(){
     const from=game.seen.level,to=G.level;game.seen.level=to;
     const un=UNLOCKS.filter(u=>u.lv>from&&u.lv<=to);
     const rankUp=rankOf(to).name!==rankOf(from).name;
-    modal({art:`<div class="lvbadge">${to}</div>`,title:`¡Subiste a nivel ${to}!`,
-      html:`<p>${rankUp?`Ahora eres <b>${esc(rankOf(to).name)}</b>.`:`Sigues como ${esc(rankOf(to).name)}.`}</p>${un.length?`<div class="unl">${un.map(u=>`<span class="pill acc">🔓 ${esc(unlockName(u))}</span>`).join("")}</div>`:""}`,
+    modal({art:`<div class="lvbadge">${to}</div>`,title:`¡Subió a nivel ${to}!`,
+      html:`<p>${rankUp?`Ahora es <b>${esc(rankOf(to).name)}</b>.`:`Sigue como ${esc(rankOf(to).name)}.`}</p>${un.length?`<div class="unl">${un.map(u=>`<span class="pill acc">🔓 ${esc(unlockName(u))}</span>`).join("")}</div>`:""}`,
       confetti:"big",sound:"level",buttons:un.length?[{label:"Seguir"},{label:"Personalizar",fn:()=>go({tab:"logros"})}]:null});
   }
   // medallas
@@ -478,20 +478,20 @@ function checkProgress(){
     const [a,b]=prizeProgress(p);
     if(a>=b&&!game.seen.prizes.includes(p.id)){
       game.seen.prizes.push(p.id);
-      modal({cls:"m-prize",art:`<div class="giftopen">🎁</div>`,title:"¡Premio desbloqueado!",html:`<p class="bigprize">${esc(p.name)}</p><p class="muted">Lo ganaste: ${esc(prizeGoalTxt(p))}. Te lo mereces.</p>`,confetti:"big",sound:"chest"});
+      modal({cls:"m-prize",art:`<div class="giftopen">🎁</div>`,title:"¡Premio desbloqueado!",html:`<p class="bigprize">${esc(p.name)}</p><p class="muted">Lo ganó: ${esc(prizeGoalTxt(p))}. Se lo merece.</p>`,confetti:"big",sound:"chest"});
     }
   });
   // misiones del día
   const t=todayKey(),p=plans[t];
   if(p&&p.missions&&!p.missionsSeen&&p.missions.every(m=>missionDone(m,t))){
     p.missionsSeen=true;savePlans();
-    modal({art:`<div class="chestbig shake">🎁</div>`,title:"¡Misiones cumplidas!",text:"Ganaste el cofre del día. Ábrelo.",sound:"medal",
+    modal({art:`<div class="chestbig shake">🎁</div>`,title:"¡Misiones cumplidas!",text:"Ganó el cofre del día. Ábralo.",sound:"medal",
       buttons:[{label:"Abrir cofre",fn:openChest},{label:"Luego"}]});
   }
   // juego completado
   if(G.gameDone&&!game.seen.fin){
     game.seen.fin=true;
-    modal({art:"🏆",title:"¡Juego completado!",text:"Vendiste todas las casas de la temporada.",confetti:"big",sound:"level",buttons:[{label:"Ver resumen",fn:()=>go({tab:"fin"})}]});
+    modal({art:"🏆",title:"¡Juego completado!",text:"Vendió todas las casas de la temporada.",confetti:"big",sound:"level",buttons:[{label:"Ver resumen",fn:()=>go({tab:"fin"})}]});
   }
   saveGame();
 }
@@ -499,7 +499,7 @@ function checkProgress(){
 /* ---------- cofre ---------- */
 function openChest(){
   const t=todayKey(),p=plans[t];if(!p||p.chest)return;
-  if(!p.missions.every(m=>missionDone(m,t))){toast("Primero cumple las 3 misiones");return}
+  if(!p.missions.every(m=>missionDone(m,t))){toast("Primero cumpla las 3 misiones");return}
   const r=Math.random(),now=new Date().toISOString();let reward;
   const themes=Object.keys(ACCENTS).filter(k=>ACCENTS[k].chest&&!game.chestThemes.includes(k));
   if(r<.40) reward={type:"xp",xp:[50,75,100,150][Math.random()*4|0]};
@@ -512,15 +512,15 @@ function openChest(){
   if(reward.type==="shield") game.shields.push(now);
   p.chest={t:now,reward};savePlans();saveGame();
   const txt=rewardTxt(reward);
-  modal({cls:"m-chest",art:`<div class="chestbig open">🎁</div>`,title:txt.t,html:`<p>${txt.d}</p><p class="study">✓ Ya cumpliste por hoy. Vete a estudiar 📚<br><span class="muted">Mañana te espera otro cofre.</span></p>`,
+  modal({cls:"m-chest",art:`<div class="chestbig open">🎁</div>`,title:txt.t,html:`<p>${txt.d}</p><p class="study">✓ Ya cumplió por hoy.<br><span class="muted">Mañana le espera otro cofre.</span></p>`,
     confetti:"big",sound:"chest",buttons:reward.type==="theme"?[{label:"Usar tema",fn:()=>{game.look.accent=reward.id;saveGame();render()}},{label:"Luego"}]:null});
   render();checkProgress();
 }
 function rewardTxt(r){
-  if(r.type==="xp")return {t:`+${r.xp} XP extra`,d:"XP directo a tu barra."};
-  if(r.type==="x2")return {t:"XP x2 mañana",d:"Todo lo que hagas mañana vale doble."};
-  if(r.type==="theme")return {t:`Tema ${ACCENTS[r.id].n}`,d:"Un color nuevo para tu app. Cámbialo en Logros."};
-  return {t:"Escudo de racha 🛡️",d:"Si un día no cumples, se gasta el escudo y tu racha sigue."};
+  if(r.type==="xp")return {t:`+${r.xp} XP extra`,d:"XP directo a su barra."};
+  if(r.type==="x2")return {t:"XP x2 mañana",d:"Todo lo que haga mañana vale doble."};
+  if(r.type==="theme")return {t:`Tema ${ACCENTS[r.id].n}`,d:"Un color nuevo para su app. Cámbielo en Logros."};
+  return {t:"Escudo de racha 🛡️",d:"Si un día no cumple, se gasta el escudo y su racha sigue."};
 }
 
 /* ======================================================================
@@ -583,10 +583,10 @@ function inicioView(){
   const items=p.items.filter(i=>!i.gone),done=items.filter(i=>i.done).length,total=items.length,left=total-done;
   const meta=Math.min(5,total);
   let big,sub,btn;
-  if(!total){big="No tienes grupos activos";sub="Actívalos en Perfil → Grupos.";btn="";}
-  else if(!done){big=`Hoy no has publicado nada`;sub=`${total} grupos te esperan. Empieza con ${meta}: son como 5 minutos.`;btn=`Empezar ${IC.chev}`;}
-  else if(left){big=`Llevas ${done} de ${total}`;sub=done<meta?`Te faltan ${meta-done} para tus primeros ${meta}.`:`Vas muy bien. Te faltan ${left}.`;btn=`Seguir ${IC.chev}`;}
-  else{big="Listo por hoy ✓";sub=`Publicaste en los ${total} grupos. Mañana más.`;btn="";}
+  if(!total){big="No tiene grupos activos";sub="Actívelos en Perfil → Grupos.";btn="";}
+  else if(!done){big=`Hoy no ha publicado nada`;sub=`${total} grupos le esperan. Empiece con ${meta}: son unos 5 minutos.`;btn=`Empezar ${IC.chev}`;}
+  else if(left){big=`Lleva ${done} de ${total}`;sub=done<meta?`Le faltan ${meta-done} para completar los primeros ${meta}.`:`Va muy bien. Le faltan ${left}.`;btn=`Seguir ${IC.chev}`;}
+  else{big="Listo por hoy ✓";sub=`Publicó en los ${total} grupos.`;btn="";}
   const st=G.streak;
   return `
   <header class="hdr compact">
@@ -601,7 +601,7 @@ function inicioView(){
     ${btn?`<button class="btn primary big" data-act="enfoque">${btn}</button>`:""}
   </section>
   <p class="frase1">${esc(FRASES[dayNum(t)%FRASES.length])}</p>
-  <p class="racha1">${st?`🔥 Llevas ${st} día${st===1?"":"s"} seguido${st===1?"":"s"}. No la rompas.`:"🔥 Publica hoy y empieza tu racha."}</p>
+  <p class="racha1">${st?`🔥 Lleva ${st} día${st===1?"":"s"} seguido${st===1?"":"s"}. No rompa la racha.`:"🔥 Publique hoy y empiece su racha."}</p>
   <button class="linkbtn center full" data-act="full" data-v="1">Ver más (misiones, metas, dinero) ${IC.chev}</button>`;
 }
 
@@ -620,30 +620,25 @@ function enfoqueView(){
   if(!it){
     const pend=plan.items.filter(i=>!i.done&&!i.gone);
     const espera=pend.filter(i=>cooldownLeft(plan,i)).length;
-    if(!pend.length) return top+`<div class="empty"><div class="e">🎉</div><h3>¡Terminaste por hoy!</h3><p>Publicaste en todos tus grupos.</p><button class="btn primary big" data-act="tab" data-t="inicio">Listo</button></div>`;
-    return top+`<div class="empty"><div class="e">⏳</div><h3>Te faltan ${pend.length}</h3><p>${espera?`${espera} están en espera porque acabas de publicar en ese grupo. `:""}${(view.skip||[]).length?"Los que saltaste te esperan.":""}</p>
-      ${(view.skip||[]).length?`<button class="btn primary big" data-act="fskipreset">Volver a los que salté</button>`:""}
+    if(!pend.length) return top+`<div class="empty"><div class="e">🎉</div><h3>Terminó por hoy</h3><p>Publicó en todos sus grupos.</p><button class="btn primary big" data-act="tab" data-t="inicio">Listo</button></div>`;
+    return top+`<div class="empty"><div class="e">⏳</div><h3>Le faltan ${pend.length}</h3><p>${espera?`${espera} esperan porque acaba de publicar en ese grupo. `:""}${(view.skip||[]).length?"Los que saltó siguen pendientes.":""}</p>
+      ${(view.skip||[]).length?`<button class="btn primary big" data-act="fskipreset">Volver a los que saltó</button>`:""}
       <button class="btn ghost full" data-act="tab" data-t="inicio" style="margin-top:8px">Terminar por hoy</button></div>`;
   }
   const g=group(it.g)||{name:"",url:""};
   const P=it.p?pst(prod(it.p)||{id:it.p,nombre:"",precio:"",fotos:[]}):null,h=P?null:house(it.h);
-  const key=ik(it),pk=P?"p:"+P.id:it.h,photos=plan.photos||{};
+  const key=ik(it),pk=P?"p:"+P.id:it.h,photos=plan.photos||{},fotosOk=!!photos[pk];
   const foto1=P?pimg(P.fotos[0],"fimg"):`<img class="fimg" src="${cover(h)}" alt="">`;
-  const step=(n,ok,label,attrs,tag)=>`<${tag||"button"} class="fstep ${ok?"ok":""}" ${attrs}><span class="fn">${ok?IC.check:n}</span><span>${label}</span></${tag||"button"}>`;
   return top+`
   <section class="fcard">
     ${foto1}
-    <div class="fi"><small>Publica en</small><b>${esc(g.name)}</b><span>${P?"📦 "+esc(P.nombre):"🏡 "+esc(h.nombre)}</span></div>
+    <div class="fi"><small>Publique en</small><b>${esc(g.name)}</b><span>${P?"📦 "+esc(P.nombre):"🏡 "+esc(h.nombre)}</span></div>
   </section>
-  <div class="fsteps">
-    ${step(1,it.copied,"Copiar texto",`data-act="gcopy" data-k="${key}"`)}
-    ${step(2,photos[pk],"Guardar fotos",`data-act="gfotos" data-k="${key}"`)}
-    ${step(3,it.opened,"Abrir el grupo, pegar y subir fotos",`data-act="gopen" data-k="${key}" href="${esc(groupHref(g))}" target="_blank" rel="noopener"`,"a")}
-  </div>
-  <div class="sticky fnav">
-    <button class="btn primary big" data-act="tick" data-k="${key}">${IC.check} Ya publiqué · siguiente</button>
-    <button class="linkbtn center full" data-act="fskip" data-k="${key}">Saltar este por ahora</button>
-  </div>`;
+  ${fotosOk?`<p class="fok">${IC.check} Las fotos de ${P?"este producto":"esta casa"} ya están guardadas hoy</p>`
+    :`<button class="fstep" data-act="gfotos" data-k="${key}"><span class="fn">1</span><span>Guardar las fotos<small>Solo una vez al día por ${P?"producto":"casa"}</small></span></button>`}
+  <a class="btn primary big fgo" data-act="copyopen" data-k="${key}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.copy} ${fotosOk?"":"2 · "}Copiar texto y abrir grupo</a>
+  <p class="small center">Pegue el texto, suba las fotos y publique. Al regresar a la app se marca solo y aparece el siguiente.</p>
+  <button class="linkbtn center full" data-act="fskip" data-k="${key}">Saltar este grupo</button>`;
 }
 
 /* ----- INICIO DETALLADO (Ver más) ----- */
@@ -657,9 +652,9 @@ function inicioDetalle(){
   // cofre + misiones de hoy (una sola tarjeta oscura)
   const mrow=m=>{const [a,b]=missionProgress(m,t),ok=a>=b;return `<div class="mrow ${ok?"ok":""}"><span class="mchk">${ok?IC.check:""}</span><span class="mt">${esc(MISSION_TXT[m.type](m))}</span><span class="mp">${Math.min(a,b)}/${b}</span></div>`};
   let chestHead;
-  if(p.chest) chestHead=`<span class="eyebrow">${IC.check} Listo por hoy · cofre: ${esc(rewardTxt(p.chest.reward).t)}</span><h3>Ya cumpliste. Vete a estudiar 📚</h3>`;
-  else if(!left) chestHead=`<span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>¡Tu cofre está listo!</h3>`;
-  else chestHead=`<span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>Te ${left===1?"falta 1 misión":`faltan ${left} misiones`}</h3>`;
+  if(p.chest) chestHead=`<span class="eyebrow">${IC.check} Listo por hoy · cofre: ${esc(rewardTxt(p.chest.reward).t)}</span><h3>Ya cumplió por hoy ✓</h3>`;
+  else if(!left) chestHead=`<span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>¡Su cofre está listo!</h3>`;
+  else chestHead=`<span class="eyebrow">${IC.sparkles} Cofre del día</span><h3>Le ${left===1?"falta 1 misión":`faltan ${left} misiones`}</h3>`;
   // botón grande: siguiente bloque
   const cur=currentItem(p);let cta;
   if(!cur) cta=`<button class="btn dark big cta" data-act="tab" data-t="publicar">${IC.check} Grupos de hoy listos</button>`;
@@ -722,7 +717,7 @@ function missionCard(){
     .sort((a,b)=>b.st-a.st||(b.last>a.last?1:b.last<a.last?-1:0));
   const {u,h,st}=scored[0];
   const steps=[["Publicar",IC.mega],["Interesado",IC.heart],["Visita",IC.door],["Apartado",IC.key]];
-  const nextTxt=["Publícala en un grupo · +10 XP","Consigue un interesado · +25 XP","Agenda una visita · +100 XP","Consigue el apartado · +1,000 XP"][Math.min(st,3)];
+  const nextTxt=["Publicarla en un grupo · +10 XP","Conseguir un interesado · +25 XP","Agendar una visita · +100 XP","Conseguir el apartado · +1,000 XP"][Math.min(st,3)];
   return `<section class="section">
     <div class="sechead"><h3>Misión actual</h3><button class="linkbtn" data-act="tab" data-t="casas">Ver todas</button></div>
     <button class="card mcard" data-act="open" data-id="${h.id}">
@@ -750,7 +745,7 @@ function casasView(){
       <small class="wd">${s.status!=="disp"?"Mundo conquistado":hh.int.length?`${hh.int.length} interesado${hh.int.length>1?"s":""}`:"Sin interesados aún"}</small>
       <div class="hp"><div class="bar"><i style="width:${hp}%"></i></div><small>${s.status!=="disp"?"Jefe derrotado":`Jefe ${hp}%`}</small></div>
     </button>`}).join("")}</div>`
-  :`<div class="empty"><div class="e">🗺️</div><h3>No hay mundos nuevos</h3><p>Pídele a Claude Code que agregue casas nuevas en data.js para la Temporada ${game.season}.</p></div>`}`;
+  :`<div class="empty"><div class="e">🗺️</div><h3>No hay mundos nuevos</h3><p>Pida a Claude Code que agregue casas nuevas en data.js para la Temporada ${game.season}.</p></div>`}`;
 }
 
 /* Respuestas con tu forma de escribir: cortas, sin rellenos y sin preguntar por la visita en cada mensaje */
@@ -808,7 +803,7 @@ function houseView(h){
 
   <section class="card">
     <div class="sechead"><h3>Responder mensajes</h3><button class="linkbtn" data-act="toggleedit">${view.editing?"Cancelar":"Editar textos"}</button></div>
-    <p class="sub">Toca el que necesites y pégalo en Messenger.</p>
+    <p class="sub">Toque el que necesite y péguelo en Messenger.</p>
     <div class="rows">
       ${buildReplies(h).map(r=>view.editing
         ? `<div class="ed"><label for="rp-${r.id}">${esc(r.t)}</label><textarea id="rp-${r.id}" data-rid="${r.id}">${esc(replyText(h,r))}</textarea></div>`
@@ -858,7 +853,7 @@ function publicarView(){
   if(tab==="ahora"){
     const b=cur?cur.b:null;
     const L=b==null?[]:plan.items.filter(i=>i.b===b&&!i.gone);
-    body=b==null?`<div class="empty"><div class="e">✅</div><h3>No hay pendientes</h3><p>${missionsOk?"Ya cumpliste tus misiones. Vete a estudiar 📚":"Revisa tus misiones en Inicio."}</p></div>`
+    body=b==null?`<div class="empty"><div class="e">✅</div><h3>No hay pendientes</h3><p>${missionsOk?"Ya cumplió sus misiones de hoy.":"Revise sus misiones en Inicio."}</p></div>`
       :`<div class="blockhead"><h3>Bloque ${b+1} · ${fmtMin(blockStart(b))}</h3><span class="muted sm">${L.filter(i=>i.done).length}/${L.length}</span></div><div class="items">${L.map(it=>itemCard(plan,it,cur,photos)).join("")}</div>`;
   }else{
     const want=tab==="hechas";
@@ -868,8 +863,8 @@ function publicarView(){
   }
   return `
   <header class="hdr"><div><h1>Publicar ahora</h1><p class="loc">${cap(new Date().toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"}))}</p></div><div class="hdr-r">${streakChip()}</div></header>
-  ${groups.some(g=>!g.paused&&!g.modo)?`<button class="tipobanner" data-act="tab" data-t="perfil" data-sub="tipos">${IC.target}<span><b>¿Algún grupo te pide “Vender artículo”?</b><small>Márcalo y se pausa solo, así no duplicas en Marketplace · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>`:""}
-  ${missionsOk?`<div class="okbanner">${IC.check} Ya cumpliste tus misiones de hoy. Lo demás es extra; si quieres, vete a estudiar 📚</div>`:""}
+  ${groups.some(g=>!g.paused&&!g.modo)?`<button class="tipobanner" data-act="tab" data-t="perfil" data-sub="tipos">${IC.target}<span><b>¿Algún grupo le pide “Vender artículo”?</b><small>Márquelo y se pausa solo, así no se duplica en Marketplace · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>`:""}
+  ${missionsOk?`<div class="okbanner">${IC.check} Ya cumplió sus misiones de hoy. Lo demás es extra.</div>`:""}
   <section class="card dayhead">
     <div class="nums"><b>${done}<span> / ${total}</span></b><em>grupos hoy<br>+${XP.grupo} XP cada uno</em></div>
     <div class="bar"><i style="width:${pct(done,total)}%"></i></div>
@@ -877,7 +872,7 @@ function publicarView(){
   </section>
   <div class="pills tabs3">${[["ahora","Ahora"],["pend","Pendientes"],["hechas","Hechas"]].map(([k,l])=>`<button class="ptab ${tab===k?"on":""}" data-act="ptab" data-v="${k}">${l}</button>`).join("")}</div>
   ${body}
-  ${total&&done<total?`<p class="small center">Por cada grupo: copia el texto → guarda las fotos → abre el grupo, pega y sube las fotos → palomea.</p>`:""}`;
+  ${total&&done<total?`<p class="small center">Por cada grupo: guarde las fotos → toque “Abrir grupo”, pegue el texto y publique. Al regresar se marca solo.</p>`:""}`;
 }
 function itemCard(plan,it,cur,photos){
   const g=group(it.g)||{name:"(grupo borrado)",url:""};
@@ -889,7 +884,7 @@ function itemCard(plan,it,cur,photos){
   const thumb=P?pimg(P.fotos[0],"ith"):`<img class="ith" src="${cover(h)}" alt="" loading="lazy">`;
   const wait=cooldownLeft(plan,it);
   return `<div class="item ${it.done?"done":""} ${isCur?"cur":""} ${P?"isprod":""} ${wait?"wait":""}" id="it-${key}">
-    ${wait?`<div class="waitbox">${IC.clock} Espera ${wait} min · acabas de publicar en este grupo. Sigue con otro y regresa.</div>`:""}
+    ${wait?`<div class="waitbox">${IC.clock} Espere ${wait} min · acaba de publicar en este grupo. Siga con otro y regrese después.</div>`:""}
     <div class="ihead">
       ${thumb}
       <div class="iinfo"><div class="gname">${esc(g.name)}${g.modo==="venta"?` <span class="pill acc tiny">Vender artículo</span>`:g.modo==="aprobacion"?` <span class="pill acc tiny">Requiere autorización</span>`:""}</div>
@@ -897,7 +892,7 @@ function itemCard(plan,it,cur,photos){
       <button class="check" role="checkbox" aria-checked="${!!it.done}" aria-label="Ya publiqué en ${esc(g.name)}" data-act="tick" data-k="${key}">${IC.check}</button>
     </div>
     ${g.modo==="venta"?`
-    <div class="ventabox"><b>Este grupo pide “Vender artículo”.</b> No lo subas otra vez: comparte tu publicación de Marketplace que ya tienes de ${esc(label)} en este grupo.${mkt?"":` <button class="glink" data-act="${P?"p-mktfor":"mktlink"}" data-id="${P?P.id:h.id}">guardar el link de tu publicación</button>`}</div>
+    <div class="ventabox"><b>Este grupo pide “Vender artículo”.</b> No lo suba otra vez: comparta su publicación de Marketplace que ya tiene de ${esc(label)} en este grupo.${mkt?"":` <button class="glink" data-act="${P?"p-mktfor":"mktlink"}" data-id="${P?P.id:h.id}">guardar el link de su publicación</button>`}</div>
     <div class="acts two">
       <a class="act pri" data-act="mktopen" data-k="${key}" href="${esc(mktHref)}" target="_blank" rel="noopener">${IC.mega}${mkt?"Mi publicación":"Mis publicaciones"}</a>
       <a class="act ${it.opened?"did":""}" data-act="gopen" data-k="${key}" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext}${hasUrl?"Abrir grupo":"Buscar"}</a>
@@ -932,7 +927,7 @@ function logrosView(){
     body=`<button class="btn dark full" data-act="prizeadd">${IC.plus} Agregar premio</button>
     <div class="prizes">${game.prizes.length?game.prizes.map(p=>{const [a,b]=prizeProgress(p),ok=a>=b;return `
       <div class="card prize ${ok?"ok":""}"><div class="pz"><span class="pzi">${ok?"🎁":IC.lock}</span><div><b>${esc(p.name)}</b><small>${esc(prizeGoalTxt(p))}</small></div><button class="rbtn sm" data-act="prizedel" data-id="${p.id}" aria-label="Borrar premio">${IC.trash}</button></div>
-      <div class="bar"><i style="width:${pct(a,b)}%"></i></div><small class="muted">${ok?"¡Desbloqueado! Ve por él.":`${num(a)} / ${num(b)}`}</small></div>`}).join("")
+      <div class="bar"><i style="width:${pct(a,b)}%"></i></div><small class="muted">${ok?"¡Desbloqueado! Ya puede ir por él.":`${num(a)} / ${num(b)}`}</small></div>`}).join("")
       :`<div class="empty"><div class="e">🎁</div><h3>Ponte premios de verdad</h3><p>Ej.: “Llegar a Vendedor → unos tenis” o “Primera venta → cena”.</p></div>`}</div>`;
   }
   return `
@@ -946,7 +941,7 @@ function lookBtn(kind,k,l){
 }
 function prizeSheet(){
   const s=openSheet(`<h3>Nuevo premio</h3>
-    <div class="field"><label for="pz-n">¿Qué te vas a regalar?</label><input class="inp" id="pz-n" placeholder="Ej. unos tenis" autocomplete="off"></div>
+    <div class="field"><label for="pz-n">¿Qué se va a regalar?</label><input class="inp" id="pz-n" placeholder="Ej. unos tenis" autocomplete="off"></div>
     <div class="field"><label for="pz-t">¿Cuándo?</label><select class="inp" id="pz-t">${Object.entries(PRIZE_TYPES).map(([k,t])=>`<option value="${k}">${esc(t.n)}</option>`).join("")}</select></div>
     <div class="field" id="pz-vw"></div>
     <button class="btn primary big" data-p="save">Guardar premio</button><button class="btn ghost" data-p="x">Cancelar</button>`);
@@ -957,7 +952,7 @@ function prizeSheet(){
   sel.onchange=upd;upd();
   s.querySelector('[data-p="x"]').onclick=closeSheet;
   s.querySelector('[data-p="save"]').onclick=()=>{
-    const name=s.querySelector("#pz-n").value.trim();if(!name){toast("Escribe el premio");return}
+    const name=s.querySelector("#pz-n").value.trim();if(!name){toast("Escriba el premio");return}
     const v=s.querySelector("#pz-v");
     game.prizes.push({id:"p"+Date.now(),name,type:sel.value,val:v?v.value:""});saveGame();closeSheet();render();toast("Premio guardado 🎁");checkProgress();
   };
@@ -985,9 +980,9 @@ function perfilView(){
   <section class="section"><div class="sechead"><h3>Ajustes</h3></div>
     <div class="card setlist">
       <button class="setrow" data-act="tab" data-t="perfil" data-sub="grupos"><span class="si">${IC.users}</span><span class="sl">Grupos de Facebook<small>${groups.filter(g=>!g.paused).length} activos · links, pausar, agregar</small></span>${IC.chev}</button>
-      <button class="setrow" data-act="gadd"><span class="si">${IC.plus}</span><span class="sl">Agregar un grupo nuevo<small>Nombre, link y cómo te deja publicar</small></span>${IC.chev}</button>
+      <button class="setrow" data-act="gadd"><span class="si">${IC.plus}</span><span class="sl">Agregar un grupo nuevo<small>Nombre, link y cómo le deja publicar</small></span>${IC.chev}</button>
       <button class="setrow" data-act="tab" data-t="perfil" data-sub="tipos"><span class="si">${IC.target}</span><span class="sl">Tipo de publicación por grupo<small>${groups.filter(g=>g.modo==="venta").length} piden “Vender artículo” · ${groups.filter(g=>g.modo&&MODOS[g.modo].pausa).length} pausados · ${groups.filter(g=>!g.modo).length} sin revisar</small></span>${IC.chev}</button>
-      <button class="setrow" data-act="tab" data-t="perfil" data-sub="verificar"><span class="si">${IC.check}</span><span class="sl">Verificar grupos<small>Revisa link por link a qué grupo pertenece</small></span>${IC.chev}</button>
+      <button class="setrow" data-act="tab" data-t="perfil" data-sub="verificar"><span class="si">${IC.check}</span><span class="sl">Verificar grupos<small>Revise link por link a qué grupo pertenece</small></span>${IC.chev}</button>
       ${tog("sound",game.sound,game.sound?IC.sound:IC.mute,"Sonidos")}
       ${tog("vibra",game.vibra,IC.vibra,"Vibración")}
       <div class="setrow col"><span class="sl">Apariencia</span><div class="pills">${[["auto","Automático"],["light","Claro"],["dark","Oscuro"]].map(([k,l])=>`<button class="ptab ${cfg.theme===k?"on":""}" data-act="theme" data-v="${k}">${l}</button>`).join("")}</div></div>
@@ -1004,12 +999,12 @@ function perfilView(){
 
   <section class="section"><div class="sechead"><h3>Avisos en el iPhone</h3></div>
     <div class="card">
-      <p class="p">Te suena una alarma del <b>Calendario</b> a la hora de cada bloque, aunque la app esté cerrada.</p>
+      <p class="p">Le suena una alarma del <b>Calendario</b> a la hora de cada bloque, aunque la app esté cerrada.</p>
       <a class="btn primary big" href="${icsChanged()?"#":"recordatorios.ics"}" data-act="ics">${IC.cal} Descargar recordatorios (.ics)</a>
       <ol class="howto small">
-        <li>Hazlo desde <b>Safari</b> (no desde el ícono de la app).</li>
-        <li>Toca <b>Agregar todo</b> y elige tu calendario.</li>
-        <li>Diario a las ${cfg.blocks.map(t=>fmtMin(toMin(t))).join(" y ")} te avisa (y 5 min antes).</li>
+        <li>Hágalo desde <b>Safari</b> (no desde el ícono de la app).</li>
+        <li>Toque <b>Agregar todo</b> y elija su calendario.</li>
+        <li>Diario a las ${cfg.blocks.map(t=>fmtMin(toMin(t))).join(" y ")} le avisa (y 5 min antes).</li>
       </ol>
     </div></section>
 
@@ -1023,7 +1018,7 @@ function perfilView(){
 
   <section class="section"><div class="sechead"><h3>Respaldo</h3></div>
     <div class="card">
-      <p class="p">Todo se guarda en tu celular. Saca un respaldo de vez en cuando.</p>
+      <p class="p">Todo se guarda en su celular. Saque un respaldo de vez en cuando.</p>
       <div class="row2"><button class="btn ghost" data-act="backup">${IC.dl} Guardar</button><label class="btn ghost" for="restore">${IC.ul} Cargar</label></div>
       <input type="file" id="restore" accept=".json,application/json" hidden>
       <button class="linkbtn" data-act="regen">Rehacer el plan de hoy</button>
@@ -1055,16 +1050,16 @@ function gruposView(){
         </span>
       </div>`}).join("")}
   </div>
-  <p class="small">Toca el nombre para editarlo o guardar su link. En Facebook: abre el grupo → <b>Compartir</b> → <b>Copiar enlace</b>.</p>
+  <p class="small">Toque el nombre para editarlo o guardar su link. En Facebook: abra el grupo → <b>Compartir</b> → <b>Copiar enlace</b>.</p>
   <button class="linkbtn" data-act="resetgroups" style="color:var(--danger)">Restaurar la lista original de grupos</button>`;
 }
 function groupSheet(id){
   const g=id?group(id):{id:"",name:"",url:"",type:"general",paused:false};
   const s=openSheet(`
-    <h3>${id?"Editar grupo":"Agregar grupo"}</h3>${id?"":`<p class="small" style="margin:0">Únete primero al grupo en Facebook. Luego pon aquí su nombre y su link.</p>`}
+    <h3>${id?"Editar grupo":"Agregar grupo"}</h3>${id?"":`<p class="small" style="margin:0">Únase primero al grupo en Facebook. Luego ponga aquí su nombre y su link.</p>`}
     <div class="field"><label for="gf-n">Nombre</label><input class="inp" id="gf-n" value="${esc(g.name)}" autocomplete="off"></div>
-    <div class="field"><label for="gf-u">Link del grupo</label><input class="inp" id="gf-u" type="url" inputmode="url" placeholder="https://www.facebook.com/groups/..." value="${esc(g.url)}" autocomplete="off"><div class="small" style="margin:0">En Facebook: abre el grupo → Compartir → Copiar enlace, y pégalo aquí.</div></div>
-    <div class="field"><span>¿Cómo te deja publicar?</span><div class="vlist" id="gf-m">${[...Object.entries(MODOS),["",{n:"No sé todavía",d:"Lo reviso después"}]].map(([k,m])=>`<button class="vopt ${(g.modo||"")===k?"on":""}" type="button" data-modo="${k}"><span class="vr">${(g.modo||"")===k?IC.check:""}</span><span class="vn">${esc(m.n)}<small class="vd">${esc(m.d)}</small></span></button>`).join("")}</div></div>
+    <div class="field"><label for="gf-u">Link del grupo</label><input class="inp" id="gf-u" type="url" inputmode="url" placeholder="https://www.facebook.com/groups/..." value="${esc(g.url)}" autocomplete="off"><div class="small" style="margin:0">En Facebook: abra el grupo → Compartir → Copiar enlace, y péguelo aquí.</div></div>
+    <div class="field"><span>¿Cómo le deja publicar?</span><div class="vlist" id="gf-m">${[...Object.entries(MODOS),["",{n:"No sé todavía",d:"Lo reviso después"}]].map(([k,m])=>`<button class="vopt ${(g.modo||"")===k?"on":""}" type="button" data-modo="${k}"><span class="vr">${(g.modo||"")===k?IC.check:""}</span><span class="vn">${esc(m.n)}<small class="vd">${esc(m.d)}</small></span></button>`).join("")}</div></div>
     <div class="field"><span>¿Qué publicas aquí?</span><div class="pills wrap" id="gf-a">${Object.entries(ACEPTA).map(([k,l])=>`<button class="ptab ${acepta(g)===k?"on":""}" type="button" data-acepta="${k}">${esc(l)}</button>`).join("")}</div></div>
     <div class="field"><span>Zona del grupo</span><div class="pills wrap" id="gf-t">${Object.entries(GROUP_TYPES).map(([k,l])=>`<button class="ptab ${g.type===k?"on":""}" type="button" data-type="${k}">${esc(l)}</button>`).join("")}</div></div>
     <button class="btn primary big" data-gs="save">Guardar</button>
@@ -1078,7 +1073,7 @@ function groupSheet(id){
     if(a==="cancel") return closeSheet();
     if(a==="save"){
       const name=$("#gf-n").value.trim(),url=$("#gf-u").value.trim();
-      if(!name){toast("Ponle nombre al grupo");return}
+      if(!name){toast("Póngale nombre al grupo");return}
       if(url&&!safeUrl(url)){toast("El link debe empezar con https://");return}
       const typeChanged=id&&g.type!==type;
       let tgt;
@@ -1090,7 +1085,7 @@ function groupSheet(id){
       saveGroups();if(!id||typeChanged||pauseChanged)rebuildToday();closeSheet();render();toast(id?"Grupo guardado ✓":"Grupo agregado ✓");
     }
     if(a==="pause"){g.paused=!g.paused;delete g.autoPause;saveGroups();rebuildToday();closeSheet();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez")}
-    if(a==="del"){if(!confirm(`¿Borrar "${g.name}"? Sale de la lista y de la rotación. Lo que ya publicaste ahí sigue contando.`))return;groups=groups.filter(x=>x.id!==g.id);saveGroups();rebuildToday();closeSheet();render();toast("Grupo borrado")}
+    if(a==="del"){if(!confirm(`¿Borrar "${g.name}"? Sale de la lista y de la rotación. Lo que ya publicó ahí sigue contando.`))return;groups=groups.filter(x=>x.id!==g.id);saveGroups();rebuildToday();closeSheet();render();toast("Grupo borrado")}
   });
 }
 
@@ -1117,7 +1112,7 @@ function verificarView(){
   const N=vd.links.length;
   const back=`<button class="rbtn" data-act="tab" data-t="perfil" aria-label="Regresar">${IC.back}</button>`;
   if(!N) return `<div class="dtop">${back}<h2>Verificar grupos</h2><span class="rbtn ghostspace"></span></div>
-    <div class="empty"><div class="e">🔗</div><h3>No hay links guardados</h3><p>Pon los links en Perfil → Grupos.</p></div>`;
+    <div class="empty"><div class="e">🔗</div><h3>No hay links guardados</h3><p>Ponga los links en Perfil → Grupos.</p></div>`;
   const i=Math.min(vd.i,N);
   const head=`<div class="dtop">${back}<h2>Verificar grupos</h2><button class="rbtn" data-act="vrestart" aria-label="Empezar de nuevo">${IC.x}</button></div>
     <div class="vprog"><div class="bar"><i style="width:${pct(i,N)}%"></i></div><small>${i<N?`Link ${i+1} de ${N}`:"Resumen"}</small></div>`;
@@ -1130,7 +1125,7 @@ function verificarView(){
     <span class="vnum">Link ${i+1} de ${N}</span>
     <code class="vurl">${esc(shortUrl(vd.links[i]))}</code>
     <a class="btn primary big" href="${esc(vd.links[i])}" target="_blank" rel="noopener">${IC.ext} Abrir</a>
-    <p class="small center">Ábrelo, fíjate cómo se llama el grupo y regresa a elegirlo.</p>
+    <p class="small center">Ábralo, fíjese cómo se llama el grupo y regrese a elegirlo.</p>
   </section>
   <section class="section"><div class="sechead"><h3>¿Qué grupo es?</h3>${p?`<span class="pill acc">elegido</span>`:""}</div>
     <div class="vlist">
@@ -1181,7 +1176,7 @@ function verifyAct(act,b){
   if(act==="vnext"){if(!vReady(vd.picks[i]))return;vd.i=Math.min(N,i+1);vSave();render();window.scrollTo(0,0);return}
   if(act==="vprev"){vd.i=Math.max(0,i-1);vSave();render();window.scrollTo(0,0);return}
   if(act==="vgo"){vd.i=+b.dataset.i;vSave();render();window.scrollTo(0,0);return}
-  if(act==="vrestart"){if(confirm("¿Empezar de nuevo? Se borra lo que llevas elegido en esta verificación.")){store.set("verified",false);vd=verifyStart(true);render();window.scrollTo(0,0)}return}
+  if(act==="vrestart"){if(confirm("¿Empezar de nuevo? Se borra lo que lleva elegido en esta verificación.")){store.set("verified",false);vd=verifyStart(true);render();window.scrollTo(0,0)}return}
   if(act==="vsave")verifySave();
 }
 document.addEventListener("input",e=>{
@@ -1234,9 +1229,9 @@ function tiposView(){
   <section class="card vlink">
     <span class="vnum" style="font-size:20px;line-height:1.25">${esc(g.name)}</span>
     <a class="btn primary big" href="${esc(groupHref(g))}" target="_blank" rel="noopener">${IC.ext} Abrir grupo</a>
-    <p class="small center">Ábrelo y toca para crear una publicación. Fíjate si te deja escribir normal o si sólo te deja “Vender artículo”.</p>
+    <p class="small center">Ábralo y toque para crear una publicación. Fíjese si le deja escribir normal o si solo le deja “Vender artículo”.</p>
   </section>
-  <section class="section"><div class="sechead"><h3>¿Cómo te deja publicar?</h3></div>
+  <section class="section"><div class="sechead"><h3>¿Cómo le deja publicar?</h3></div>
     <div class="vlist">
       ${Object.entries(MODOS).map(([k,m])=>`<button class="vopt ${g.modo===k?"on":""}" data-act="tpick" data-v="${k}"><span class="vr">${g.modo===k?IC.check:""}</span><span class="vn">${esc(m.n)}<small class="vd">${esc(m.d)}</small></span></button>`).join("")}
       <button class="vopt ${!g.modo?"":""}" data-act="tpick" data-v=""><span class="vr"></span><span class="vn">No sé todavía<small class="vd">Lo reviso después</small></span></button>
@@ -1253,8 +1248,8 @@ function tiposAct(act,b){
   if(act==="tgo"){view.ti=+b.dataset.i;render();window.scrollTo(0,0);return}
 }
 function mktSheet(h){
-  const s=openSheet(`<h3>Link de tu publicación en Marketplace</h3>
-    <p class="small" style="margin:0">En Facebook abre tu publicación de <b>${esc(h.nombre)}</b> → <b>Compartir</b> → <b>Copiar enlace</b>, y pégalo aquí. Así, en los grupos que piden “Vender artículo”, la app te lleva directo a esa publicación para compartirla en vez de crear otra.</p>
+  const s=openSheet(`<h3>Link de su publicación en Marketplace</h3>
+    <p class="small" style="margin:0">En Facebook abra su publicación de <b>${esc(h.nombre)}</b> → <b>Compartir</b> → <b>Copiar enlace</b>, y péguelo aquí. Así, en los grupos que piden “Vender artículo”, la app te lleva directo a esa publicación para compartirla en vez de crear otra.</p>
     <input class="inp" id="mk-u" type="url" inputmode="url" placeholder="https://www.facebook.com/marketplace/item/..." value="${esc(hs(h.id).mktUrl||"")}" autocomplete="off">
     <button class="btn primary big" data-m="save">Guardar</button><button class="btn ghost" data-m="x">Cancelar</button>`);
   s.querySelector('[data-m="x"]').onclick=closeSheet;
@@ -1269,7 +1264,7 @@ function finView(){
   return `<div class="fin">
     <div class="fin-art">🏆</div>
     <h1>¡Juego completado!</h1>
-    <p class="muted">Temporada ${game.season}: vendiste ${season.length} casa${season.length===1?"":"s"}.</p>
+    <p class="muted">Temporada ${game.season}: vendió ${season.length} casa${season.length===1?"":"s"}.</p>
     <div class="card money big"><small>Comisión ganada</small><b>${money(G.sold*COMISION)}</b></div>
     <div class="stats">
       <div class="stat"><b>${num(G.xp)}</b><small>XP total</small></div><div class="stat"><b>Nv ${G.level}</b><small>${esc(G.rank)}</small></div>
@@ -1278,7 +1273,7 @@ function finView(){
     </div>
     <button class="btn primary big" data-act="season">${IC.sparkles} Empezar Temporada ${game.season+1}</button>
     <button class="btn ghost full" data-act="tab" data-t="inicio">Volver al inicio</button>
-    <p class="small center">En la Temporada ${game.season+1} pídele a Claude Code que agregue las casas nuevas. Tu nivel, XP y medallas se quedan.</p>
+    <p class="small center">En la Temporada ${game.season+1} pida a Claude Code que agregue las casas nuevas. Su nivel, XP y medallas se quedan.</p>
   </div>`;
 }
 
@@ -1303,8 +1298,8 @@ function buildICS(){
     "BEGIN:VEVENT",`UID:mis-casas-bloque-${i+1}-${t.replace(":","")}@mis-casas`,`DTSTAMP:${start}T000000Z`,
     `DTSTART;TZID=America/Mexico_City:${start}T${h}${m}00`,`DTEND;TZID=America/Mexico_City:${start}T${pad(Math.floor(end/60)%24)}${pad(end%60)}00`,
     "RRULE:FREQ=DAILY",`SUMMARY:🏡 Publicar casas – bloque ${fmtMin(toMin(t))}`,
-    `DESCRIPTION:Abre Mis Ventas → Publicar ahora.\\n${url}`,`URL:${url}`,
-    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Toca publicar en los grupos","TRIGGER:-PT5M","END:VALARM",
+    `DESCRIPTION:Abra Mis Ventas → Publicar ahora.\\n${url}`,`URL:${url}`,
+    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Le toca publicar en los grupos","TRIGGER:-PT5M","END:VALARM",
     "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Ya toca publicar","TRIGGER:PT0M","END:VALARM","END:VEVENT"].join("\r\n")}).join("\r\n");
   return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mis Ventas//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH",
     "BEGIN:VTIMEZONE","TZID:America/Mexico_City","BEGIN:STANDARD","DTSTART:19700101T000000","TZOFFSETFROM:-0600","TZOFFSETTO:-0600","TZNAME:CST","END:STANDARD","END:VTIMEZONE",
@@ -1322,13 +1317,12 @@ function downloadFile(name,type,text){
    ====================================================================== */
 function afterTick(plan,it,wasBlockDone){
   if(!it.done)return;
-  const n=XP.grupo*(G.x2today?2:1);xpPop(n,"Publicaste en un grupo");sfx("xp");haptic();
+  const n=XP.grupo*(G.x2today?2:1);xpPop(n,"Publicó en un grupo");sfx("xp");haptic();
   if(view.tab==="enfoque"){
     checkProgress();
     const items=plan.items.filter(i=>!i.gone),done=items.filter(i=>i.done).length,left=items.length-done;
-    if(!left){modal({art:"🎉",title:"¡Terminaste por hoy!",text:`Publicaste en los ${items.length} grupos. Así se venden las casas.`,confetti:"big",sound:"level",buttons:[{label:"Listo",fn:()=>go({tab:"inicio"})}]});return}
-    if(done%5===0)modal({art:"🔥",title:`¡Llevas ${done}!`,text:`Te faltan ${left}. ¿Le sigues o terminas por hoy?`,confetti:true,sound:"medal",
-      buttons:[{label:"Seguir"},{label:"Terminar por hoy",fn:()=>go({tab:"inicio"})}]});
+    if(!left){modal({art:"🎉",title:"Terminó por hoy",text:`Publicó en sus ${items.length} grupos.`,confetti:"big",sound:"level",buttons:[{label:"Listo",fn:()=>go({tab:"inicio"})}]});return}
+    if(done%10===0)confetti();
     window.scrollTo(0,0);return;
   }
   const before=modalQ.length;checkProgress();
@@ -1336,7 +1330,7 @@ function afterTick(plan,it,wasBlockDone){
   const L=plan.items.filter(i=>i.b===it.b&&!i.gone);
   if(L.every(i=>i.done)&&!wasBlockDone){
     const all=plan.items.filter(i=>!i.gone||i.done),rest=all.filter(i=>!i.done).length;
-    modal({art:"🎉",title:`¡Bloque de las ${fmtMin(blockStart(it.b))} listo!`,text:`${L.length} grupos publicados.${rest?` Te quedan ${rest} para el siguiente bloque.`:" Terminaste todos los grupos de hoy."}`,confetti:true,sound:"medal"});
+    modal({art:"🎉",title:`¡Bloque de las ${fmtMin(blockStart(it.b))} listo!`,text:`${L.length} grupos publicados.${rest?` Le quedan ${rest} para el siguiente bloque.`:" Terminó todos los grupos de hoy."}`,confetti:true,sound:"medal"});
     return;
   }
   const nxt=currentItem(plan);
@@ -1369,7 +1363,9 @@ document.addEventListener("click",e=>{
     case "gcopy": if(it){copy(groupText(it),b,"Texto copiado. Ahora las fotos 👉",()=>{it.copied=true;savePlans();render()})}break;
     case "gfotos": if(it){const pk=it.p?"p:"+it.p:it.h,done=()=>{plan.photos=plan.photos||{};plan.photos[pk]=true;savePlans();render()};
       if(it.p)saveProdFotos(prod(it.p),b,done);else saveAll(house(it.h),b,done)}break;
-    case "gopen": if(it){it.opened=true;savePlans();setTimeout(render,400)}break;
+    case "gopen": if(it){it.opened=true;savePlans();pendingOpen={k:ik(it),t:Date.now()};setTimeout(render,400)}break;
+    case "copyopen": if(it){const txt=groupText(it);if(!copySync(txt)&&navigator.clipboard)navigator.clipboard.writeText(txt).catch(()=>{});
+      it.copied=true;it.opened=true;savePlans();pendingOpen={k:ik(it),t:Date.now()}}break;
     /* casas */
     case "open": go({tab:"casas",id:b.dataset.id,f:view.f});break;
     case "lb": openLB(h,+b.dataset.i);break;
@@ -1380,9 +1376,9 @@ document.addEventListener("click",e=>{
     case "group": copy(h.texto,b,"Copiado para grupo ✓");break;
     case "field": {const k=b.dataset.k;copy(k==="precio"?(h.precioNum||""):h[k],b);break;}
     case "reply": {const r=buildReplies(h).find(x=>x.id===b.dataset.rid);
-      copy(replyText(h,r),b,"Copiado, pégalo en Messenger ✓",()=>{
+      copy(replyText(h,r),b,"Copiado, péguelo en Messenger ✓",()=>{
         game.replies.push(new Date().toISOString());game.replies=game.replies.slice(-500);saveGame();calc();
-        if(r.id==="seguimiento") toast("¿Ya lo mandaste?",{label:`Sí · +${XP.seguimiento} XP`,fn:()=>gain("seguimiento",h.id)});
+        if(r.id==="seguimiento") toast("¿Ya lo mandó?",{label:`Sí · +${XP.seguimiento} XP`,fn:()=>gain("seguimiento",h.id)});
         checkProgress();
       });break;}
     case "toggleedit": view.editing=!view.editing;render();break;
@@ -1404,7 +1400,7 @@ document.addEventListener("click",e=>{
     case "mktopen": if(it){it.opened=true;savePlans();setTimeout(render,400)}break;
     case "vpick": case "vnext": case "vprev": case "vgo": case "vrestart": case "vsave": verifyAct(act,b);break;
     case "gpause": {const g=group(b.dataset.g);g.paused=!g.paused;saveGroups();rebuildToday();render();toast(g.paused?"Grupo pausado":"Grupo activo otra vez");break;}
-    case "resetgroups": if(confirm("¿Volver a la lista original de grupos? Se pierden los cambios que les hiciste.")){groups=clone(DEFAULT_GROUPS);saveGroups();rebuildToday();render();toast("Lista original restaurada")}break;
+    case "resetgroups": if(confirm("¿Volver a la lista original de grupos? Se pierden los cambios que les hizo.")){groups=clone(DEFAULT_GROUPS);saveGroups();rebuildToday();render();toast("Lista original restaurada")}break;
     /* perfil */
     case "sound": game.sound=!game.sound;saveGame();render();if(game.sound)sfx("xp");break;
     case "vibra": game.vibra=!game.vibra;saveGame();render();haptic();break;
@@ -1421,7 +1417,7 @@ document.addEventListener("click",e=>{
     case "season": {
       game.seasons.push({n:game.season,fin:new Date().toISOString(),casas:G.active.map(u=>u.id),comision:G.active.length*COMISION});
       game.archived.push(...G.active.map(u=>u.id));game.season++;game.seen.fin=false;saveGame();
-      modal({art:"🗺️",title:`Temporada ${game.season}`,text:"Nuevos mundos te esperan. Pídele a Claude Code que agregue las casas nuevas.",sound:"level"});
+      modal({art:"🗺️",title:`Temporada ${game.season}`,text:"Nuevos mundos le esperan. Pida a Claude Code que agregue las casas nuevas.",sound:"level"});
       go({tab:"casas"});break;}
   }
 });
@@ -1431,13 +1427,28 @@ document.addEventListener("change",e=>{
   if(t.id==="restore"&&t.files&&t.files[0]){
     t.files[0].text().then(txt=>{
       const d=JSON.parse(txt);if(!d||!d.state||!d.groups)throw 0;
-      if(!confirm("¿Cargar este respaldo? Reemplaza lo que tienes ahora en el celular."))return;
+      if(!confirm("¿Cargar este respaldo? Reemplaza lo que tiene ahora en el celular."))return;
       state=d.state;custom=d.custom||{};groups=d.groups;cfg=Object.assign(clone(DEFAULT_CFG),d.cfg||{});rot=d.rot||{cur:{},last:{},snap:null};plans=d.plans||{};game=mergeGame(d.game);
       migrate();store.set("custom2",custom);saveGroups();saveCfg();savePlans();saveGame();render();toast("Respaldo cargado ✓");
     }).catch(()=>toast("Ese archivo no es un respaldo válido"));
     t.value="";
   }
 });
+
+/* al regresar de Facebook después de "Abrir grupo": se marca solo como publicado (con opción de deshacer) */
+let pendingOpen=null;
+function markFromOpen(){
+  if(!pendingOpen||document.hidden)return;
+  if(Date.now()-pendingOpen.t<3000)return;
+  const plan=plans[todayKey()],k=pendingOpen.k;pendingOpen=null;
+  const it=plan&&plan.items.find(x=>ik(x)===k&&!x.gone);if(!it||it.done)return;
+  const wasBlockDone=plan.items.filter(i=>i.b===it.b&&!i.gone).every(i=>i.done);
+  it.done=new Date().toISOString();savePlans();render();afterTick(plan,it,wasBlockDone);
+  const items=plan.items.filter(i=>!i.gone),d=items.filter(i=>i.done).length;
+  if(d<items.length&&!modalQ.length)toast(`Publicado ✓ · lleva ${d} de ${items.length}`,{label:"Deshacer",fn:()=>{it.done=null;savePlans();render();toast("Se quitó la marca")}});
+}
+document.addEventListener("visibilitychange",markFromOpen);
+window.addEventListener("focus",markFromOpen);
 
 /* al volver a la app: si cambió el día, plan nuevo; refresca avisos */
 function refresh(){

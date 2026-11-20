@@ -81,12 +81,12 @@ function makeMissions(t){
   return m;
 }
 const MISSION_TXT = {
-  block:()=>"Publica en todos los grupos de un bloque",
-  seg:m=>`Manda ${m.n} seguimientos a interesados`,
-  mkt:()=>"Publica o renueva una casa en Marketplace",
-  int:()=>"Consigue 1 interesado nuevo",
-  reply:m=>`Contesta ${m.n} mensajes con respuestas rápidas`,
-  posts:m=>`Publica en ${m.n} grupos`
+  block:()=>"Publique en todos los grupos de un bloque",
+  seg:m=>`Mande ${m.n} seguimientos a interesados`,
+  mkt:()=>"Publique o renueve una casa en Marketplace",
+  int:()=>"Consiga 1 interesado nuevo",
+  reply:m=>`Conteste ${m.n} mensajes con respuestas rápidas`,
+  posts:m=>`Publique en ${m.n} grupos`
 };
 function missionProgress(m,d){
   const c=G.dc[d]||{};
@@ -202,27 +202,27 @@ function streakCalc(){
 
 /* ---------- medallas ---------- */
 const MEDALS = [
-  {id:"pub1",   e:"📣", n:"Primera publicación", d:"Publica por primera vez", ok:()=>G.tot.grupo+G.tot.marketplace>=1},
-  {id:"int1",   e:"💬", n:"Primer interesado",   d:"Registra tu primer interesado", ok:()=>G.tot.interesado>=1},
-  {id:"vis1",   e:"🚪", n:"Primera visita",      d:"Agenda o haz tu primera visita", ok:()=>G.tot.visitaAgendada+G.tot.visitaHecha>=1},
-  {id:"apar1",  e:"🔑", n:"Primer apartado",     d:"Aparta tu primera casa", ok:()=>G.tot.apartado>=1},
-  {id:"venta1", e:"💰", n:"Primera venta",       d:"Vende tu primera casa", ok:()=>G.tot.venta>=1},
+  {id:"pub1",   e:"📣", n:"Primera publicación", d:"Publique por primera vez", ok:()=>G.tot.grupo+G.tot.marketplace>=1},
+  {id:"int1",   e:"💬", n:"Primer interesado",   d:"Registre su primer interesado", ok:()=>G.tot.interesado>=1},
+  {id:"vis1",   e:"🚪", n:"Primera visita",      d:"Agende o haga su primera visita", ok:()=>G.tot.visitaAgendada+G.tot.visitaHecha>=1},
+  {id:"apar1",  e:"🔑", n:"Primer apartado",     d:"Aparte su primera casa", ok:()=>G.tot.apartado>=1},
+  {id:"venta1", e:"💰", n:"Primera venta",       d:"Venda su primera casa", ok:()=>G.tot.venta>=1},
   {id:"racha7", e:"🔥", n:"Racha de 7 días",     d:"7 días seguidos cumpliendo misiones", ok:()=>G.maxStreak>=7},
   {id:"racha30",e:"☄️", n:"Racha de 30 días",    d:"30 días seguidos cumpliendo misiones", ok:()=>G.maxStreak>=30},
   {id:"pub100", e:"💯", n:"100 publicaciones",   d:"Entre grupos y Marketplace", ok:()=>G.tot.grupo+G.tot.marketplace>=100},
   {id:"pub500", e:"🚀", n:"500 publicaciones",   d:"Entre grupos y Marketplace", ok:()=>G.tot.grupo+G.tot.marketplace>=500},
-  {id:"todos",  e:"🌐", n:"Todos en un día",     d:"Publica en todos los grupos en un día", ok:()=>G.fullDays>=1},
-  {id:"rayo",   e:"⚡", n:"Rayo",                d:"Contesta 10 mensajes en menos de 10 min", ok:()=>G.fast10},
-  {id:"seg20",  e:"📨", n:"Insistente",          d:"Manda 20 seguimientos", ok:()=>G.tot.seguimiento>=20},
-  {id:"vis10",  e:"🏡", n:"Anfitrión",           d:"Haz 10 visitas", ok:()=>G.tot.visitaHecha>=10},
-  {id:"cofre1", e:"🎁", n:"Primer cofre",        d:"Abre tu primer cofre", ok:()=>G.chests>=1},
-  {id:"cofre10",e:"🧰", n:"Coleccionista",       d:"Abre 10 cofres", ok:()=>G.chests>=10},
-  {id:"semana", e:"🏅", n:"Semana perfecta",     d:"Cumple las 4 metas de una semana", ok:()=>G.perfectWeeks>=1},
+  {id:"todos",  e:"🌐", n:"Todos en un día",     d:"Publique en todos los grupos en un día", ok:()=>G.fullDays>=1},
+  {id:"rayo",   e:"⚡", n:"Rayo",                d:"Conteste 10 mensajes en menos de 10 min", ok:()=>G.fast10},
+  {id:"seg20",  e:"📨", n:"Insistente",          d:"Mande 20 seguimientos", ok:()=>G.tot.seguimiento>=20},
+  {id:"vis10",  e:"🏡", n:"Anfitrión",           d:"Haga 10 visitas", ok:()=>G.tot.visitaHecha>=10},
+  {id:"cofre1", e:"🎁", n:"Primer cofre",        d:"Abra su primer cofre", ok:()=>G.chests>=1},
+  {id:"cofre10",e:"🧰", n:"Coleccionista",       d:"Abra 10 cofres", ok:()=>G.chests>=10},
+  {id:"semana", e:"🏅", n:"Semana perfecta",     d:"Cumpla las 4 metas de una semana", ok:()=>G.perfectWeeks>=1},
   ...HOUSES.map(h=>({id:"conq_"+h.id, e:(h.jefe||(h.unidades&&h.unidades[0].jefe)||{e:"🏆"}).e, n:"Conquistar "+(h.chip||h.nombre),
-     d:h.unidades?`Aparta o vende las ${h.unidades.length} casas`:"Aparta o vende la casa", ok:()=>!!G.conq[h.id]})),
-  {id:"vendedor",e:"🤝",n:"Rango Vendedor",      d:"Llega al nivel 6", ok:()=>G.level>=6},
-  {id:"leyenda", e:"👑",n:"Leyenda de Madero",   d:"Llega al nivel 15", ok:()=>G.level>=15},
-  {id:"fin",     e:"🏆",n:"Juego completado",    d:"Vende todas las casas de la temporada", ok:()=>G.gameDone||game.seasons.length>0}
+     d:h.unidades?`Aparte o venda las ${h.unidades.length} casas`:"Aparte o venda la casa", ok:()=>!!G.conq[h.id]})),
+  {id:"vendedor",e:"🤝",n:"Rango Vendedor",      d:"Llegue al nivel 6", ok:()=>G.level>=6},
+  {id:"leyenda", e:"👑",n:"Leyenda de Madero",   d:"Llegue al nivel 15", ok:()=>G.level>=15},
+  {id:"fin",     e:"🏆",n:"Juego completado",    d:"Venda todas las casas de la temporada", ok:()=>G.gameDone||game.seasons.length>0}
 ];
 const earnedMedals = () => MEDALS.filter(m=>m.ok());
 
