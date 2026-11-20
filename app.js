@@ -1,5 +1,5 @@
 /* Mis Ventas · app (datos en data.js, juego en game.js) */
-const APP_VERSION = "3.9.0";
+const APP_VERSION = "4.0.0";
 
 /* ---------- storage ---------- */
 const store = {
@@ -535,10 +535,11 @@ function render(){
   else if(t==="casas") html=view.pid?prodView(prod(view.pid)):view.id?houseView(house(view.id)):view.cat==="prod"?prodsView():casasView();
   else if(t==="publicar") html=publicarView();
   else if(t==="logros") html=logrosView();
+  else if(t==="enfoque") html=enfoqueView();
   else if(t==="perfil") html=view.sub==="grupos"?gruposView():view.sub==="verificar"?verificarView():view.sub==="tipos"?tiposView():perfilView();
   else if(t==="fin") html=finView();
-  const detail=(t==="casas"&&(view.id||view.pid))||t==="fin"||(t==="perfil"&&(view.sub==="verificar"||view.sub==="tipos"));
-  $("#app").innerHTML=(detail?"":t==="inicio"?`<div class="safe-top"></div>`:topXP())+html;
+  const detail=(t==="casas"&&(view.id||view.pid))||t==="fin"||(t==="perfil"&&(view.sub==="verificar"||view.sub==="tipos"))||t==="enfoque";
+  $("#app").innerHTML=(detail?(t==="enfoque"?`<div class="safe-top"></div>`:""):t==="inicio"?`<div class="safe-top"></div>`:topXP())+html;
   document.body.classList.toggle("nonav",!!detail);
   renderNav();hydratePhotos();
 }
@@ -575,8 +576,78 @@ function topXP(){
 function fireSize(n){return n>=30?"f4":n>=14?"f3":n>=7?"f2":n>=1?"f1":"f0"}
 const streakChip = () => `<span class="streak ${fireSize(G.streak)}" title="Racha">${IC.flame}<b>${G.streak}</b></span>`;
 
-/* ----- INICIO ----- */
+/* ----- INICIO SENCILLO: un mensaje y un botón ----- */
 function inicioView(){
+  if(view.full) return `<button class="back2" data-act="full" data-v="0">${IC.back} Inicio</button>`+inicioDetalle();
+  const t=todayKey(),p=plans[t];
+  const items=p.items.filter(i=>!i.gone),done=items.filter(i=>i.done).length,total=items.length,left=total-done;
+  const meta=Math.min(5,total);
+  let big,sub,btn;
+  if(!total){big="No tienes grupos activos";sub="Actívalos en Perfil → Grupos.";btn="";}
+  else if(!done){big=`Hoy no has publicado nada`;sub=`${total} grupos te esperan. Empieza con ${meta}: son como 5 minutos.`;btn=`Empezar ${IC.chev}`;}
+  else if(left){big=`Llevas ${done} de ${total}`;sub=done<meta?`Te faltan ${meta-done} para tus primeros ${meta}.`:`Vas muy bien. Te faltan ${left}.`;btn=`Seguir ${IC.chev}`;}
+  else{big="Listo por hoy ✓";sub=`Publicaste en los ${total} grupos. Mañana más.`;btn="";}
+  const st=G.streak;
+  return `
+  <header class="hdr compact">
+    <div class="hdr-l">${avatar()}<div><h1>Hola, Ivan</h1><p class="loc">${cap(new Date().toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"}))}</p></div></div>
+    <div class="hdr-r">${streakChip()}</div>
+  </header>
+  <section class="hero1 ${left&&total?"":"done"}">
+    <div class="h1n">${left&&total?`<b>${left}</b><small>grupos por publicar hoy</small>`:`<b>✓</b>`}</div>
+    <h2>${esc(big)}</h2>
+    <p>${esc(sub)}</p>
+    ${total?`<div class="bar"><i style="width:${pct(done,total)}%"></i></div>`:""}
+    ${btn?`<button class="btn primary big" data-act="enfoque">${btn}</button>`:""}
+  </section>
+  <p class="frase1">${esc(FRASES[dayNum(t)%FRASES.length])}</p>
+  <p class="racha1">${st?`🔥 Llevas ${st} día${st===1?"":"s"} seguido${st===1?"":"s"}. No la rompas.`:"🔥 Publica hoy y empieza tu racha."}</p>
+  <button class="linkbtn center full" data-act="full" data-v="1">Ver más (misiones, metas, dinero) ${IC.chev}</button>`;
+}
+
+/* ----- MODO UNO POR UNO ----- */
+function enfoqueItem(plan){
+  const skip=view.skip||[];
+  const pend=plan.items.filter(i=>!i.done&&!i.gone);
+  return pend.find(i=>!skip.includes(ik(i))&&!cooldownLeft(plan,i))||null;
+}
+function enfoqueView(){
+  const t=todayKey(),plan=plans[t];
+  const items=plan.items.filter(i=>!i.gone),done=items.filter(i=>i.done).length,total=items.length;
+  const it=enfoqueItem(plan);
+  const top=`<div class="dtop"><button class="rbtn" data-act="tab" data-t="inicio" aria-label="Salir">${IC.x}</button><h2>${done} de ${total}</h2><span class="rbtn ghostspace"></span></div>
+    <div class="bar fbar"><i style="width:${pct(done,total)}%"></i></div>`;
+  if(!it){
+    const pend=plan.items.filter(i=>!i.done&&!i.gone);
+    const espera=pend.filter(i=>cooldownLeft(plan,i)).length;
+    if(!pend.length) return top+`<div class="empty"><div class="e">🎉</div><h3>¡Terminaste por hoy!</h3><p>Publicaste en todos tus grupos.</p><button class="btn primary big" data-act="tab" data-t="inicio">Listo</button></div>`;
+    return top+`<div class="empty"><div class="e">⏳</div><h3>Te faltan ${pend.length}</h3><p>${espera?`${espera} están en espera porque acabas de publicar en ese grupo. `:""}${(view.skip||[]).length?"Los que saltaste te esperan.":""}</p>
+      ${(view.skip||[]).length?`<button class="btn primary big" data-act="fskipreset">Volver a los que salté</button>`:""}
+      <button class="btn ghost full" data-act="tab" data-t="inicio" style="margin-top:8px">Terminar por hoy</button></div>`;
+  }
+  const g=group(it.g)||{name:"",url:""};
+  const P=it.p?pst(prod(it.p)||{id:it.p,nombre:"",precio:"",fotos:[]}):null,h=P?null:house(it.h);
+  const key=ik(it),pk=P?"p:"+P.id:it.h,photos=plan.photos||{};
+  const foto1=P?pimg(P.fotos[0],"fimg"):`<img class="fimg" src="${cover(h)}" alt="">`;
+  const step=(n,ok,label,attrs,tag)=>`<${tag||"button"} class="fstep ${ok?"ok":""}" ${attrs}><span class="fn">${ok?IC.check:n}</span><span>${label}</span></${tag||"button"}>`;
+  return top+`
+  <section class="fcard">
+    ${foto1}
+    <div class="fi"><small>Publica en</small><b>${esc(g.name)}</b><span>${P?"📦 "+esc(P.nombre):"🏡 "+esc(h.nombre)}</span></div>
+  </section>
+  <div class="fsteps">
+    ${step(1,it.copied,"Copiar texto",`data-act="gcopy" data-k="${key}"`)}
+    ${step(2,photos[pk],"Guardar fotos",`data-act="gfotos" data-k="${key}"`)}
+    ${step(3,it.opened,"Abrir el grupo, pegar y subir fotos",`data-act="gopen" data-k="${key}" href="${esc(groupHref(g))}" target="_blank" rel="noopener"`,"a")}
+  </div>
+  <div class="sticky fnav">
+    <button class="btn primary big" data-act="tick" data-k="${key}">${IC.check} Ya publiqué · siguiente</button>
+    <button class="linkbtn center full" data-act="fskip" data-k="${key}">Saltar este por ahora</button>
+  </div>`;
+}
+
+/* ----- INICIO DETALLADO (Ver más) ----- */
+function inicioDetalle(){
   const t=todayKey(),p=plans[t],ms=p.missions||[];
   const left=ms.filter(m=>!missionDone(m,t)).length;
   const due=duePending();
@@ -1252,6 +1323,14 @@ function downloadFile(name,type,text){
 function afterTick(plan,it,wasBlockDone){
   if(!it.done)return;
   const n=XP.grupo*(G.x2today?2:1);xpPop(n,"Publicaste en un grupo");sfx("xp");haptic();
+  if(view.tab==="enfoque"){
+    checkProgress();
+    const items=plan.items.filter(i=>!i.gone),done=items.filter(i=>i.done).length,left=items.length-done;
+    if(!left){modal({art:"🎉",title:"¡Terminaste por hoy!",text:`Publicaste en los ${items.length} grupos. Así se venden las casas.`,confetti:"big",sound:"level",buttons:[{label:"Listo",fn:()=>go({tab:"inicio"})}]});return}
+    if(done%5===0)modal({art:"🔥",title:`¡Llevas ${done}!`,text:`Te faltan ${left}. ¿Le sigues o terminas por hoy?`,confetti:true,sound:"medal",
+      buttons:[{label:"Seguir"},{label:"Terminar por hoy",fn:()=>go({tab:"inicio"})}]});
+    window.scrollTo(0,0);return;
+  }
   const before=modalQ.length;checkProgress();
   if(modalQ.length>before)return;
   const L=plan.items.filter(i=>i.b===it.b&&!i.gone);
@@ -1271,6 +1350,10 @@ document.addEventListener("click",e=>{
   if(act==="padd"||act==="openp"||act.startsWith("p-")){prodAct(act,b);return}
   switch(act){
     case "cat": go({tab:"casas",cat:b.dataset.v});break;
+    case "enfoque": go({tab:"enfoque",skip:[]});break;
+    case "fskip": view.skip=[...(view.skip||[]),b.dataset.k];render();window.scrollTo(0,0);break;
+    case "fskipreset": view.skip=[];render();break;
+    case "full": view.full=b.dataset.v==="1";render();window.scrollTo(0,0);break;
     case "tab": {const v={tab:b.dataset.t,sub:b.dataset.sub};if(v.sub==="tipos"){const k=groups.findIndex(g=>!g.modo);v.ti=k<0?groups.length:k}go(v);break;}
     case "filter": view.f=b.dataset.f;render();break;
     case "ptab": view.ptab=b.dataset.v;render();break;
@@ -1359,7 +1442,7 @@ document.addEventListener("change",e=>{
 /* al volver a la app: si cambió el día, plan nuevo; refresca avisos */
 function refresh(){
   if(document.hidden||$("#sheet")||document.querySelector(".lb,.party"))return;
-  if(view.tab==="inicio"||view.tab==="publicar")render();else renderNav();
+  if(view.tab==="inicio"||view.tab==="publicar"||view.tab==="enfoque")render();else renderNav();
 }
 document.addEventListener("visibilitychange",refresh);
 setInterval(refresh,60000);
